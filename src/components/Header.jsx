@@ -20,7 +20,7 @@ export default function Header(){
               <h1 className="text-lg font-bold tracking-tight">
                 <Link to="/" className="hover:underline">Welding Machine Registration System</Link>
               </h1>
-              <p className="text-slate-500 text-sm dark:text-slate-400">프로토타입 (React)</p>
+              <p className="text-slate-500 text-sm dark:text-slate-400">프로토타입</p>
             </div>
           </div>
           <ThemeToggle />
