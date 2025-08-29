@@ -8,7 +8,7 @@ const LANGS = [
   { code: 'ko', label: '한국어' },
   { code: 'zh', label: '中文' },
   { code: 'ja', label: '日本語' },
-  // 동유럽 예시: 러시아어 (원하시면 PL 등으로 바꿔드려요)
+  // 동유럽 예시: 러시아어 (원하시면 PL 등으로 교체)
   { code: 'ru', label: 'Русский' },
 ]
 
@@ -103,8 +103,8 @@ export default function Warranty(){
                 className={[
                   'inline-flex items-center rounded-xl border px-3 py-2 text-sm font-semibold',
                   active
-                    ? 'border-slate-300 bg-slate-100 text-slate-900'
-                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100',
+                    ? 'border-slate-300 bg-slate-100 text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800',
                 ].join(' ')}
               >
                 {label}
@@ -116,7 +116,7 @@ export default function Warranty(){
 
       {/* 1) 최상단: 워런티 정책(보편 문구) */}
       <Card title={t.title}>
-        <ul className="list-disc pl-5 text-slate-700 text-sm space-y-1">
+        <ul className="list-disc pl-5 text-slate-800 dark:text-slate-200 text-sm space-y-1">
           {t.bullets.map((line, idx) => (
             <li key={idx}>{line}</li>
           ))}
@@ -130,16 +130,16 @@ export default function Warranty(){
           <img
             src="https://placehold.co/800x400?text=Warranty+Image"
             alt={t.imageAlt}
-            className="w-full h-56 md:h-64 object-cover rounded-xl border border-slate-200"
+            className="w-full h-56 md:h-64 object-cover rounded-xl border border-slate-200 dark:border-slate-700"
           />
-          <p className="text-slate-500 text-xs mt-2">
+          <p className="text-slate-500 dark:text-slate-300 text-xs mt-2">
             * Placeholder image. Replace with your actual warranty graphic.
           </p>
         </Card>
 
         {/* 오른쪽: 문서(새탭 열기 + 다운로드) */}
         <Card title="Warranty Documents">
-          <p className="text-slate-600 text-sm mb-2">
+          <p className="text-slate-600 dark:text-slate-200 text-sm mb-2">
             {lang.toUpperCase()} — {t.docLabel}
           </p>
 
@@ -148,21 +148,21 @@ export default function Warranty(){
               href={t.docUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-900 px-4 py-2 text-white text-sm font-semibold hover:opacity-90"
+              className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-900 px-4 py-2 text-white text-sm font-semibold hover:opacity-90 dark:border-slate-700 dark:bg-slate-800"
             >
               새 탭으로 열기
             </a>
             <a
               href={t.docUrl}
               download={`warranty-${lang}.pdf`}
-              className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
               title="PDF 다운로드"
             >
               PDF 다운로드
             </a>
           </div>
 
-          <p className="text-slate-500 text-xs mt-2">
+          <p className="text-slate-500 dark:text-slate-300 text-xs mt-2">
             * URL은 추후 실제 파일로 교체하세요. (일부 외부 도메인은 브라우저 정책에 따라 강제 다운로드가 제한될 수 있습니다)
           </p>
         </Card>
