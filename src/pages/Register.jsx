@@ -5,6 +5,19 @@ import PageWrap from './_PageWrap.jsx';
 import Card from '../components/Card.jsx';
 import { Label, Input, Textarea, Button } from '../components/FormControls.jsx';
 
+// ------- 전역(페이지간 공유) 스토리지 키 & 유틸 --------
+const STORE_KEY = 'HYW_REG_PRODUCTS_BY_EMAIL';
+const LAST_EMAIL_KEY = 'HYW_LAST_VERIFIED_EMAIL';
+
+const loadStore = () => {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }
+  catch { return {}; }
+};
+const saveStore = (obj) => {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(obj)); }
+  catch {}
+};
+
 // ------- 제품 분류 / 모델 옵션 --------
 const CATEGORY_OPTIONS = [
   { value: 'wire', label: 'Wire Feeder' },
@@ -163,6 +176,8 @@ export default function Register() {
       setEmailVerified(true);
       setEmailErr('');
       setEmailMsg('이메일 인증이 완료되었습니다.');
+      // ✅ 최근 인증 이메일 저장 (Manuals.jsx에서 사용)
+      try { localStorage.setItem(LAST_EMAIL_KEY, email.trim()); } catch {}
     } else {
       setEmailVerified(false);
       setEmailMsg('');
@@ -171,9 +186,9 @@ export default function Register() {
   };
 
   // ----- 3) 개인정보 동의 -----
-  const [consentService, setConsentService] = useState(false);   // 필수
-  const [consentXBorder, setConsentXBorder] = useState(false);   // 필수
-  const [consentMarketing, setConsentMarketing] = useState(false); // 필수로 변경
+  const [consentService, setConsentService] = useState(false);     // 필수
+  const [consentXBorder, setConsentXBorder] = useState(false);     // 필수
+  const [consentMarketing, setConsentMarketing] = useState(false); // 필수(요구사항에 따라 변경됨)
 
   // 모달 상태
   const [showPolicy, setShowPolicy] = useState(false);
@@ -207,16 +222,37 @@ export default function Register() {
   const handleSubmit = () => {
     // 콘솔 기록(프로토타입)
     const data = {
-      product: { category, model, productName, serial, purchaseDate, vendor,
-        invoiceFiles: invoiceFiles.map(f => ({ name: f.name, type: f.type, size: f.size })) },
-      customer: { firstName, surName, phone: `${phoneCode} ${phoneLocal}`, email, zip, address, emailVerified },
+      product: {
+        category, model, productName, serial, purchaseDate, vendor,
+        invoiceFiles: invoiceFiles.map(f => ({ name: f.name, type: f.type, size: f.size }))
+      },
+      customer: {
+        firstName, surName, phone: `${phoneCode} ${phoneLocal}`, email, zip, address, emailVerified
+      },
       privacy: { consentService, consentXBorder, consentMarketing },
+      createdAt: new Date().toISOString(),
     };
     console.log('[REGISTER SUBMIT]', data);
 
+    // ✅ 이메일별 등록 제품 저장
+    try {
+      const store = loadStore();
+      const key = (email || '').trim();
+      if (key) {
+        const arr = Array.isArray(store[key]) ? store[key] : [];
+        arr.push(data);
+        store[key] = arr;
+        saveStore(store);
+        // 최근 인증 이메일도 업데이트 (안전용)
+        localStorage.setItem(LAST_EMAIL_KEY, key);
+      }
+    } catch (e) {
+      console.warn('등록 데이터 저장 실패:', e);
+    }
+
     alert('등록이 완료되었습니다.');
     resetAll();
-    navigate('/');
+    navigate('/'); // 필요시 '/manuals'로 변경 가능
   };
 
   return (
@@ -507,137 +543,136 @@ export default function Register() {
 
       {/* 4) 확인 */}
       <div ref={s4Ref} className="h-0 scroll-mt-[84px]" />
-<Card title="4. 입력 내용 확인">
-  <div className={step < 4 ? 'pointer-events-none opacity-60' : ''}>
-    {/* 상단 요약 칩 */}
-    <div className="mb-4 flex flex-wrap gap-2">
-      <span className="px-2 py-1 text-xs rounded-full border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-        모델: {CATEGORY_OPTIONS.find(c => c.value === category)?.label || '-'}
-      </span>
-      <span className="px-2 py-1 text-xs rounded-full border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-        SAP 코드명: {model || '-'}
-      </span>
-      <span className="px-2 py-1 text-xs rounded-full border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-        시리얼: {serial || '-'}
-      </span>
-    </div>
-
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {/* 제품정보 */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm
-                          dark:border-slate-700 dark:bg-slate-900">
-        <h4 className="font-semibold flex items-center gap-2">
-          <span>📦</span> 제품정보
-        </h4>
-        <dl className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2 text-sm">
-          <dt className="text-slate-500 dark:text-slate-300">모델</dt>
-          <dd className="col-span-2 font-medium">{CATEGORY_OPTIONS.find(c => c.value === category)?.label || '-'}</dd>
-
-          <dt className="text-slate-500 dark:text-slate-300">SAP 코드명</dt>
-          <dd className="col-span-2 font-medium">{model || '-'}</dd>
-
-          <dt className="text-slate-500 dark:text-slate-300">제품명</dt>
-          <dd className="col-span-2">{productName || '-'}</dd>
-
-          <dt className="text-slate-500 dark:text-slate-300">시리얼</dt>
-          <dd className="col-span-2">{serial || '-'}</dd>
-
-          <dt className="text-slate-500 dark:text-slate-300">구매일자</dt>
-          <dd className="col-span-2">{purchaseDate || '-'}</dd>
-
-          <dt className="text-slate-500 dark:text-slate-300">구매처</dt>
-          <dd className="col-span-2">{vendor || '-'}</dd>
-
-          <dt className="text-slate-500 dark:text-slate-300">인보이스</dt>
-          <dd className="col-span-2">{invoiceFiles.length ? invoiceFiles.map(f => f.name).join(', ') : '-'}</dd>
-        </dl>
-      </section>
-
-      {/* 고객정보 */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm
-                          dark:border-slate-700 dark:bg-slate-900">
-        <h4 className="font-semibold flex items-center gap-2">
-          <span>🙍</span> 고객정보
-        </h4>
-        <dl className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2 text-sm">
-          <dt className="text-slate-500 dark:text-slate-300">이름</dt>
-          <dd className="col-span-2">{firstName} {surName}</dd>
-
-          <dt className="text-slate-500 dark:text-slate-300">전화</dt>
-          <dd className="col-span-2">{phoneCode} {phoneLocal}</dd>
-
-          <dt className="text-slate-500 dark:text-slate-300">이메일</dt>
-          <dd className="col-span-2">
-            {email}{' '}
-            <span className={[
-              'ml-1 px-2 py-0.5 text-[11px] rounded-full border',
-              emailVerified
-                ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
-                : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300'
-            ].join(' ')}>
-              {emailVerified ? '인증 완료' : '미인증'}
+      <Card title="4. 입력 내용 확인">
+        <div className={step < 4 ? 'pointer-events-none opacity-60' : ''}>
+          {/* 상단 요약 칩 */}
+          <div className="mb-4 flex flex-wrap gap-2">
+            <span className="px-2 py-1 text-xs rounded-full border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+              모델: {CATEGORY_OPTIONS.find(c => c.value === category)?.label || '-'}
             </span>
-          </dd>
+            <span className="px-2 py-1 text-xs rounded-full border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+              SAP 코드명: {model || '-'}
+            </span>
+            <span className="px-2 py-1 text-xs rounded-full border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+              시리얼: {serial || '-'}
+            </span>
+          </div>
 
-          <dt className="text-slate-500 dark:text-slate-300">ZIP</dt>
-          <dd className="col-span-2">{zip || '-'}</dd>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 제품정보 */}
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm
+                                dark:border-slate-700 dark:bg-slate-900">
+              <h4 className="font-semibold flex items-center gap-2">
+                <span>📦</span> 제품정보
+              </h4>
+              <dl className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2 text-sm">
+                <dt className="text-slate-500 dark:text-slate-300">모델</dt>
+                <dd className="col-span-2 font-medium">{CATEGORY_OPTIONS.find(c => c.value === category)?.label || '-'}</dd>
 
-          <dt className="text-slate-500 dark:text-slate-300">주소</dt>
-          <dd className="col-span-2 break-words">{address}</dd>
-        </dl>
-      </section>
+                <dt className="text-slate-500 dark:text-slate-300">SAP 코드명</dt>
+                <dd className="col-span-2 font-medium">{model || '-'}</dd>
 
-      {/* 개인정보 동의 */}
-      <section className="md:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm
-                          dark:border-slate-700 dark:bg-slate-900">
-        <h4 className="font-semibold flex items-center gap-2">
-          <span>🔒</span> 개인정보 동의
-        </h4>
-        <ul className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-          <li className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2
-                          dark:border-slate-700">
-            <span>보증 서비스 목적 처리</span>
-            <span className={[
-              'px-2 py-0.5 text-[11px] rounded-full border',
-              consentService
-                ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
-                : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300'
-            ].join(' ')}>{consentService ? '동의' : '미동의'}</span>
-          </li>
+                <dt className="text-slate-500 dark:text-slate-300">제품명</dt>
+                <dd className="col-span-2">{productName || '-'}</dd>
 
-          <li className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2
-                          dark:border-slate-700">
-            <span>국외 이전 안내 확인</span>
-            <span className={[
-              'px-2 py-0.5 text-[11px] rounded-full border',
-              consentXBorder
-                ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
-                : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300'
-            ].join(' ')}>{consentXBorder ? '확인' : '미확인'}</span>
-          </li>
+                <dt className="text-slate-500 dark:text-slate-300">시리얼</dt>
+                <dd className="col-span-2">{serial || '-'}</dd>
 
-          <li className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2
-                          dark:border-slate-700">
-            <span>제품 공지/마케팅 수신</span>
-            <span className={[
-              'px-2 py-0.5 text-[11px] rounded-full border',
-              consentMarketing
-                ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
-                : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300'
-            ].join(' ')}>{consentMarketing ? '동의' : '미동의'}</span>
-          </li>
-        </ul>
+                <dt className="text-slate-500 dark:text-slate-300">구매일자</dt>
+                <dd className="col-span-2">{purchaseDate || '-'}</dd>
 
-        {/* 액션 버튼 */}
-        <div className="mt-5 flex items-center justify-between">
-          <Button onClick={() => setStep(3)}>이전(개인정보 동의)</Button>
-          <Button onClick={handleSubmit}>등록 완료</Button>
+                <dt className="text-slate-500 dark:text-slate-300">구매처</dt>
+                <dd className="col-span-2">{vendor || '-'}</dd>
+
+                <dt className="text-slate-500 dark:text-slate-300">인보이스</dt>
+                <dd className="col-span-2">{invoiceFiles.length ? invoiceFiles.map(f => f.name).join(', ') : '-'}</dd>
+              </dl>
+            </section>
+
+            {/* 고객정보 */}
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm
+                                dark:border-slate-700 dark:bg-slate-900">
+              <h4 className="font-semibold flex items-center gap-2">
+                <span>🙍</span> 고객정보
+              </h4>
+              <dl className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2 text-sm">
+                <dt className="text-slate-500 dark:text-slate-300">이름</dt>
+                <dd className="col-span-2">{firstName} {surName}</dd>
+
+                <dt className="text-slate-500 dark:text-slate-300">전화</dt>
+                <dd className="col-span-2">{phoneCode} {phoneLocal}</dd>
+
+                <dt className="text-slate-500 dark:text-slate-300">이메일</dt>
+                <dd className="col-span-2">
+                  {email}{' '}
+                  <span className={[
+                    'ml-1 px-2 py-0.5 text-[11px] rounded-full border',
+                    emailVerified
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
+                      : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300'
+                  ].join(' ')}>
+                    {emailVerified ? '인증 완료' : '미인증'}
+                  </span>
+                </dd>
+
+                <dt className="text-slate-500 dark:text-slate-300">ZIP</dt>
+                <dd className="col-span-2">{zip || '-'}</dd>
+
+                <dt className="text-slate-500 dark:text-slate-300">주소</dt>
+                <dd className="col-span-2 break-words">{address}</dd>
+              </dl>
+            </section>
+
+            {/* 개인정보 동의 */}
+            <section className="md:col-span-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm
+                                dark:border-slate-700 dark:bg-slate-900">
+              <h4 className="font-semibold flex items-center gap-2">
+                <span>🔒</span> 개인정보 동의
+              </h4>
+              <ul className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                <li className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2
+                                dark:border-slate-700">
+                  <span>보증 서비스 목적 처리</span>
+                  <span className={[
+                    'px-2 py-0.5 text-[11px] rounded-full border',
+                    consentService
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
+                      : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300'
+                  ].join(' ')}>{consentService ? '동의' : '미동의'}</span>
+                </li>
+
+                <li className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2
+                                dark:border-slate-700">
+                  <span>국외 이전 안내 확인</span>
+                  <span className={[
+                    'px-2 py-0.5 text-[11px] rounded-full border',
+                    consentXBorder
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
+                      : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300'
+                  ].join(' ')}>{consentXBorder ? '확인' : '미확인'}</span>
+                </li>
+
+                <li className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2
+                                dark:border-slate-700">
+                  <span>제품 공지/마케팅 수신</span>
+                  <span className={[
+                    'px-2 py-0.5 text-[11px] rounded-full border',
+                    consentMarketing
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
+                      : 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-300'
+                  ].join(' ')}>{consentMarketing ? '동의' : '미동의'}</span>
+                </li>
+              </ul>
+
+              {/* 액션 버튼 */}
+              <div className="mt-5 flex items-center justify-between">
+                <Button onClick={() => setStep(3)}>이전(개인정보 동의)</Button>
+                <Button onClick={handleSubmit}>등록 완료</Button>
+              </div>
+            </section>
+          </div>
         </div>
-      </section>
-    </div>
-  </div>
-</Card>
-
+      </Card>
 
       {/* 모달들 */}
       {showPolicy && (

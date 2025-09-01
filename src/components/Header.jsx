@@ -26,13 +26,14 @@ export default function Header(){
           <ThemeToggle />
         </div>
 
-        {/* 홈에서도 네비 표시하려면 이대로 사용 */}
+        {/* 홈에서도 네비 표시 */}
         <nav aria-label="Primary" className="pb-3">
           <ul className="flex flex-wrap gap-2">
             <NavLinkItem to="/warranty" label="워런티 정책" />
             <NavLinkItem to="/register" label="제품 등록" />
-            <NavLinkItem to="/support" label="고객센터" />
+            <NavLinkItem to="/products" label="제품 조회" />   {/* ← 추가 */}
             <NavLinkItem to="/manuals" label="메뉴얼 검색" />
+            <NavLinkItem to="/support" label="고객센터" />
             <NavLinkItem to="/service" label="수리/대리점" />
           </ul>
         </nav>

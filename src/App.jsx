@@ -9,6 +9,8 @@ import Support from './pages/Support.jsx'
 import Manuals from './pages/Manuals.jsx'
 import Service from './pages/Service.jsx'
 import NotFound from './pages/NotFound.jsx'
+import ManualsPdfPlaceholder from './pages/ManualsPdfPlaceholder.jsx'
+import ProductLookup from './pages/ProductLookup.jsx'
 
 export default function App(){
   return (
@@ -22,6 +24,8 @@ export default function App(){
         <Route path="/manuals" element={<Manuals />} />
         <Route path="/service" element={<Service />} />
         <Route path="*" element={<NotFound />} />
+        <Route path="/manuals/pdf-missing" element={<ManualsPdfPlaceholder />} />
+        <Route path="/products" element={<ProductLookup />} />
       </Routes>
     </div>
   )
