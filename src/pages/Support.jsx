@@ -140,7 +140,7 @@ export default function Support(){
   return (
     <PageWrap
       title="고객센터"
-      subtitle="용접기 등록 시스템 고객센터입니다. (브라우저 종료 시 데이터가 삭제됩니다)"
+      subtitle="용접기 등록 시스템 고객센터입니다."
     >
       {/* 상단 안내/버튼 */}
       <Card>
