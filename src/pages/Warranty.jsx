@@ -87,7 +87,7 @@ export default function Warranty(){
   return (
     <PageWrap
       title="워런티 정책"
-      subtitle="언어 전환 버튼 / 상단 정책 문구 / 하단 이미지-문서 2열 레이아웃"
+      subtitle=""
     >
       {/* 언어 선택 */}
       <div className="mb-3">
@@ -163,7 +163,7 @@ export default function Warranty(){
           </div>
 
           <p className="text-slate-500 dark:text-slate-300 text-xs mt-2">
-            * URL은 추후 실제 파일로 교체하세요. (일부 외부 도메인은 브라우저 정책에 따라 강제 다운로드가 제한될 수 있습니다)
+            * 워런티 문서 제공 필요
           </p>
         </Card>
       </div>

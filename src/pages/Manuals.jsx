@@ -166,12 +166,11 @@ export default function Manuals() {
   }, [q])
 
   return (
-    <PageWrap title="메뉴얼 검색" subtitle="제품별 Owner’s Manual (5개 언어) 다운로드/열람">
+    <PageWrap title="매뉴얼 검색" subtitle="">
       {/* 안내 문구 - 다크모드 색상 개선 */}
       <Card className="mb-4">
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700
                         dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-          모든 제품에 대해 <b>Owner’s Manual</b>만 제공합니다.
           지원 언어: <b>English / 한국어 / 中文 / 日本語 / Русский</b>.
           <div className="mt-2 text-slate-600 dark:text-slate-300">
             각 언어의 <b>“새 탭에서 보기”</b>, <b>“다운로드”</b> 버튼은 현재 PDF가 없을 경우
