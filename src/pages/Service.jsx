@@ -8,41 +8,49 @@ import { Button } from '../components/FormControls.jsx'
 const GMAPS_SRC =
   'https://maps.googleapis.com/maps/api/js?key=AIzaSyDX-1CbT-hHJVGBtrbr-APdb6wMB3bcq9U&language=ko'
 
-/** 내부 기본 시작 좌표(표시는 안함) : 강남구 테헤란로 507 */
+/** 기본 시작 좌표 : 강남구 테헤란로 507 */
 const DEFAULT_POS = { lat: 37.5079, lng: 127.0554, label: '현재 위치' }
 
 /** 국가별 기본 뷰 */
 const COUNTRY_VIEW = {
-  KR: { center: { lat: 36.5, lng: 127.8 }, zoom: 6 },
+  KR: { center: { lat: 36.2, lng: 127.9 }, zoom: 7 }, // KR은 실제로는 fitBounds 사용
   JP: { center: { lat: 36.2, lng: 138.25 }, zoom: 5 },
   US: { center: { lat: 39.5, lng: -98.35 }, zoom: 4 },
 }
 
-/** 대리점 데모 */
+/** 대한민국 지리 경계(북한이 거의 안 보이도록 북쪽 제한) */
+const SOUTH_KOREA_BOUNDS = {
+  south: 33.0,
+  west: 124.5,
+  north: 38.6,
+  east: 131.1,
+}
+
+/** 데모 대리점 (상세정보 포함) */
 const DEALERS = [
   // KR
-  { id: 'kr-r1', country: 'KR', type: 'repair', name: '서울 강남 서비스센터', lat: 37.498, lng: 127.0276, addr: '서울 강남' },
-  { id: 'kr-r2', country: 'KR', type: 'repair', name: '부산 서비스센터', lat: 35.1796, lng: 129.0756, addr: '부산' },
-  { id: 'kr-r3', country: 'KR', type: 'repair', name: '인천 서비스센터', lat: 37.4563, lng: 126.7052, addr: '인천' },
-  { id: 'kr-s1', country: 'KR', type: 'sales',  name: '서울 종로 대리점',   lat: 37.572,  lng: 126.9794, addr: '서울 종로' },
-  { id: 'kr-s2', country: 'KR', type: 'sales',  name: '대전 대리점',       lat: 36.3504, lng: 127.3845, addr: '대전' },
-  { id: 'kr-s3', country: 'KR', type: 'sales',  name: '광주 대리점',       lat: 35.1595, lng: 126.8526, addr: '광주' },
+  { id: 'kr-r1', country: 'KR', type: 'repair', name: '서울 강남 서비스센터', lat: 37.498,  lng: 127.0276, addr: '서울 강남구 테헤란로 일대', phone: '02-000-1000', hours: '평일 09:00-18:00' },
+  { id: 'kr-r2', country: 'KR', type: 'repair', name: '부산 서비스센터',     lat: 35.1796, lng: 129.0756, addr: '부산광역시 중구',           phone: '051-000-2000', hours: '평일 09:00-18:00' },
+  { id: 'kr-r3', country: 'KR', type: 'repair', name: '인천 서비스센터',     lat: 37.4563, lng: 126.7052, addr: '인천광역시 미추홀구',       phone: '032-000-3000', hours: '평일 09:00-18:00' },
+  { id: 'kr-s1', country: 'KR', type: 'sales',  name: '서울 종로 대리점',   lat: 37.572,  lng: 126.9794, addr: '서울 종로구 세종대로 일대', phone: '02-111-4000', hours: '평일 09:00-18:00' },
+  { id: 'kr-s2', country: 'KR', type: 'sales',  name: '대전 대리점',       lat: 36.3504, lng: 127.3845, addr: '대전광역시 서구',           phone: '042-111-5000', hours: '평일 09:00-18:00' },
+  { id: 'kr-s3', country: 'KR', type: 'sales',  name: '광주 대리점',       lat: 35.1595, lng: 126.8526, addr: '광주광역시 서구',           phone: '062-111-6000', hours: '평일 09:00-18:00' },
 
   // US
-  { id: 'us-r1', country: 'US', type: 'repair', name: 'LA Service Center', lat: 34.0522, lng: -118.2437, addr: 'Los Angeles' },
-  { id: 'us-r2', country: 'US', type: 'repair', name: 'Chicago Service',   lat: 41.8781, lng: -87.6298,  addr: 'Chicago' },
-  { id: 'us-r3', country: 'US', type: 'repair', name: 'NYC Service',       lat: 40.7128, lng: -74.006,   addr: 'New York' },
-  { id: 'us-s1', country: 'US', type: 'sales',  name: 'Dallas Dealer',     lat: 32.7767, lng: -96.797,   addr: 'Dallas' },
-  { id: 'us-s2', country: 'US', type: 'sales',  name: 'Atlanta Dealer',    lat: 33.749,  lng: -84.388,   addr: 'Atlanta' },
-  { id: 'us-s3', country: 'US', type: 'sales',  name: 'Seattle Dealer',    lat: 47.6062, lng: -122.3321, addr: 'Seattle' },
+  { id: 'us-r1', country: 'US', type: 'repair', name: 'LA Service Center', lat: 34.0522, lng: -118.2437, addr: 'Los Angeles, CA', phone: '(213) 000-1000', hours: 'Mon–Fri 9am–6pm' },
+  { id: 'us-r2', country: 'US', type: 'repair', name: 'Chicago Service',   lat: 41.8781, lng: -87.6298,  addr: 'Chicago, IL',      phone: '(312) 000-2000', hours: 'Mon–Fri 9am–6pm' },
+  { id: 'us-r3', country: 'US', type: 'repair', name: 'NYC Service',       lat: 40.7128, lng: -74.006,   addr: 'New York, NY',     phone: '(212) 000-3000', hours: 'Mon–Fri 9am–6pm' },
+  { id: 'us-s1', country: 'US', type: 'sales',  name: 'Dallas Dealer',     lat: 32.7767, lng: -96.797,   addr: 'Dallas, TX',       phone: '(214) 111-4000', hours: 'Mon–Fri 9am–6pm' },
+  { id: 'us-s2', country: 'US', type: 'sales',  name: 'Atlanta Dealer',    lat: 33.749,  lng: -84.388,   addr: 'Atlanta, GA',      phone: '(404) 111-5000', hours: 'Mon–Fri 9am–6pm' },
+  { id: 'us-s3', country: 'US', type: 'sales',  name: 'Seattle Dealer',    lat: 47.6062, lng: -122.3321, addr: 'Seattle, WA',      phone: '(206) 111-6000', hours: 'Mon–Fri 9am–6pm' },
 
   // JP
-  { id: 'jp-r1', country: 'JP', type: 'repair', name: 'Tokyo Service',   lat: 35.6762, lng: 139.6503, addr: 'Tokyo' },
-  { id: 'jp-r2', country: 'JP', type: 'repair', name: 'Osaka Service',   lat: 34.6937, lng: 135.5023, addr: 'Osaka' },
-  { id: 'jp-r3', country: 'JP', type: 'repair', name: 'Fukuoka Service', lat: 33.5904, lng: 130.4017, addr: 'Fukuoka' },
-  { id: 'jp-s1', country: 'JP', type: 'sales',  name: 'Yokohama Dealer', lat: 35.4437, lng: 139.638,  addr: 'Yokohama' },
-  { id: 'jp-s2', country: 'JP', type: 'sales',  name: 'Nagoya Dealer',   lat: 35.1815, lng: 136.9066, addr: 'Nagoya' },
-  { id: 'jp-s3', country: 'JP', type: 'sales',  name: 'Sapporo Dealer',  lat: 43.0618, lng: 141.3545, addr: 'Sapporo' },
+  { id: 'jp-r1', country: 'JP', type: 'repair', name: 'Tokyo Service',   lat: 35.6762, lng: 139.6503, addr: 'Chiyoda, Tokyo', phone: '03-0000-1000', hours: '平日 09:00-18:00' },
+  { id: 'jp-r2', country: 'JP', type: 'repair', name: 'Osaka Service',   lat: 34.6937, lng: 135.5023, addr: 'Kita, Osaka',    phone: '06-0000-2000', hours: '平日 09:00-18:00' },
+  { id: 'jp-r3', country: 'JP', type: 'repair', name: 'Fukuoka Service', lat: 33.5904, lng: 130.4017, addr: 'Hakata, Fukuoka', phone: '092-000-3000', hours: '平日 09:00-18:00' },
+  { id: 'jp-s1', country: 'JP', type: 'sales',  name: 'Yokohama Dealer', lat: 35.4437, lng: 139.638,  addr: 'Nishi, Yokohama', phone: '045-111-4000', hours: '平日 09:00-18:00' },
+  { id: 'jp-s2', country: 'JP', type: 'sales',  name: 'Nagoya Dealer',   lat: 35.1815, lng: 136.9066, addr: 'Naka, Nagoya',   phone: '052-111-5000', hours: '平日 09:00-18:00' },
+  { id: 'jp-s3', country: 'JP', type: 'sales',  name: 'Sapporo Dealer',  lat: 43.0618, lng: 141.3545, addr: 'Chuo, Sapporo',  phone: '011-111-6000', hours: '平日 09:00-18:00' },
 ]
 
 /** 거리(km) */
@@ -69,7 +77,7 @@ function detectCountry(lat, lng) {
 function loadGoogleMaps() {
   return new Promise((resolve, reject) => {
     if (window.google?.maps) return resolve(window.google)
-    let script = document.createElement('script')
+    const script = document.createElement('script')
     script.src = GMAPS_SRC
     script.async = true
     script.defer = true
@@ -87,58 +95,50 @@ function loadGoogleMaps() {
   })
 }
 
+/** ===== 핀(물방울) 마커 아이콘 ===== */
+function pinIcon(google, { fill = '#ef4444', stroke = '#b91c1c', scale = 1.6 } = {}) {
+  // 24x32 기준의 클래식 핀 path
+  const path = 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z'
+  return {
+    path,
+    fillColor: fill,
+    fillOpacity: 1,
+    strokeColor: stroke,
+    strokeWeight: 1.5,
+    scale,
+    anchor: new google.maps.Point(12, 28),     // 끝점
+    labelOrigin: new google.maps.Point(12, 11) // 핀 속 라벨 중심
+  }
+}
+
 export default function Service() {
   const mapRef = useRef(null)
   const map = useRef(null)
   const infoWin = useRef(null)
   const markersById = useRef(new Map())
   const googleRef = useRef(null)
+  const initialKRFitDoneRef = useRef(false) // KR 첫 진입 보정
 
-  // 최근 동작 추적(국가버튼/내위치)
-  const lastActionRef = useRef(null)          // 'country' | 'locate' | null
-  const lastLocatedPosRef = useRef(null)      // {lat,lng}
+  const lastActionRef = useRef(null)
+  const lastLocatedPosRef = useRef(null)
 
-  // ✅ 기본값: 대한민국 + 전체
+  // 기본: 대한민국 + 수리 대리점
   const [country, setCountry] = useState('KR')
-  const [typeFilter, setTypeFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('repair')
   const [currentPos, setCurrentPos] = useState(DEFAULT_POS)
-
-  // 초기 지도 준비 여부 (마커가 안 나오는 이슈 방지)
   const [mapReady, setMapReady] = useState(false)
 
-  // 국가 내 대리점
-  const countryDealers = useMemo(
-    () => DEALERS.filter((d) => d.country === country),
-    [country]
-  )
+  const countryDealers = useMemo(() => DEALERS.filter((d) => d.country === country), [country])
 
-  // 필터 적용
-  const filteredDealers = useMemo(
-    () => countryDealers.filter((d) => (typeFilter === 'all' ? true : d.type === typeFilter)),
-    [countryDealers, typeFilter]
-  )
+  const sortedDealers = useMemo(() => {
+    return countryDealers
+      .filter((d) => d.type === typeFilter)
+      .map((d) => ({ ...d, dist: distanceKm(currentPos, d) }))
+      .sort((a, b) => a.dist - b.dist)
+      .map((d, idx) => ({ ...d, rank: idx + 1 }))
+  }, [countryDealers, typeFilter, currentPos])
 
-  // 가까운 순 Top3
-  const topRepair = useMemo(
-    () =>
-      countryDealers
-        .filter((d) => d.type === 'repair')
-        .map((d) => ({ ...d, dist: distanceKm(currentPos, d) }))
-        .sort((a, b) => a.dist - b.dist)
-        .slice(0, 3),
-    [countryDealers, currentPos]
-  )
-  const topSales = useMemo(
-    () =>
-      countryDealers
-        .filter((d) => d.type === 'sales')
-        .map((d) => ({ ...d, dist: distanceKm(currentPos, d) }))
-        .sort((a, b) => a.dist - b.dist)
-        .slice(0, 3),
-    [countryDealers, currentPos]
-  )
-
-  /** 초기 지도 생성(한 번만) */
+  /** 초기 지도 생성 */
   useEffect(() => {
     let cancelled = false
     loadGoogleMaps()
@@ -146,7 +146,7 @@ export default function Service() {
         if (cancelled) return
         googleRef.current = google
         map.current = new google.maps.Map(mapRef.current, {
-          center: COUNTRY_VIEW.KR.center, // 기본 KR
+          center: COUNTRY_VIEW.KR.center,
           zoom: COUNTRY_VIEW.KR.zoom,
           mapTypeControl: false,
           streetViewControl: false,
@@ -154,21 +154,47 @@ export default function Service() {
           zoomControl: true,
         })
         infoWin.current = new google.maps.InfoWindow()
-        setMapReady(true) // ✅ 마커 렌더 트리거
+        setMapReady(true)
+
+        // 컨테이너/타일 준비가 끝났을 때 1회 KR 맞춤
+        google.maps.event.addListenerOnce(map.current, 'tilesloaded', () => {
+          if (country === 'KR' && !initialKRFitDoneRef.current) {
+            fitKoreaBounds()
+            initialKRFitDoneRef.current = true
+          }
+        })
+
+        // 레이아웃 직후 사이즈 재계산 보정
+        setTimeout(() => {
+          if (!map.current) return
+          google.maps.event.trigger(map.current, 'resize')
+        }, 0)
       })
       .catch(console.error)
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [])
 
-  /** 국가가 바뀔 때만 국가 중심으로 이동 */
+  /** KR 디폴트 진입 안전망: mapReady 직후 1회 더 보정 */
+  useEffect(() => {
+    if (!mapReady || !map.current || !googleRef.current) return
+    if (country !== 'KR' || initialKRFitDoneRef.current) return
+    const google = googleRef.current
+    const doFit = () => { fitKoreaBounds(); initialKRFitDoneRef.current = true }
+    if (map.current.getBounds()) doFit()
+    else google.maps.event.addListenerOnce(map.current, 'tilesloaded', doFit)
+  }, [mapReady, country])
+
+  /** 국가 변경 */
   useEffect(() => {
     if (!map.current) return
-    map.current.setCenter(COUNTRY_VIEW[country].center)
-    map.current.setZoom(COUNTRY_VIEW[country].zoom)
+    if (country === 'KR') {
+      fitKoreaBounds()
+    } else {
+      map.current.setCenter(COUNTRY_VIEW[country].center)
+      map.current.setZoom(COUNTRY_VIEW[country].zoom)
+    }
 
-    // 방금 "내 위치"로 국가가 바뀐 경우 → 최종적으로 내 위치로 확대
+    // 내 위치에서 넘어온 전환이면 최종적으로 내 위치로 확대
     if (lastActionRef.current === 'locate' && lastLocatedPosRef.current) {
       const p = lastLocatedPosRef.current
       map.current.panTo(p)
@@ -177,80 +203,97 @@ export default function Service() {
     }
   }, [country])
 
-  /** 마커 갱신(센터 변경 없음) — 초기 mapReady를 포함해야 첫 진입에도 보임 */
+  /** 마커 갱신 */
   useEffect(() => {
     const google = googleRef.current
     if (!google || !map.current || !mapReady) return
 
-    // 기존 마커 제거
+    // 초기화
     markersById.current.forEach((m) => m.setMap(null))
     markersById.current.clear()
 
-    // 현재 위치 마커(파랑) + 라벨
+    // 현재 위치: 파란 핀 (하단 텍스트 없음)
     const you = new google.maps.Marker({
       position: { lat: currentPos.lat, lng: currentPos.lng },
       map: map.current,
       title: currentPos.label || '현재 위치',
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 9,
-        fillColor: '#2563eb',
-        fillOpacity: 1,
-        strokeColor: '#1d4ed8',
-        strokeWeight: 2,
-      },
-      label: { text: '현재 위치', color: '#1d4ed8', fontWeight: '700', fontSize: '12px' },
+      icon: pinIcon(google, { fill: '#2563eb', stroke: '#1d4ed8', scale: 1.6 }),
+      zIndex: 1000,
     })
     markersById.current.set('you', you)
 
-    // 대리점 마커(이름 라벨 고정)
-    filteredDealers.forEach((d) => {
-      const icon =
-        d.type === 'repair'
-          ? { path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW, scale: 5, fillColor: '#dc2626', fillOpacity: 1, strokeWeight: 1, strokeColor: '#991b1b' }
-          : { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,  scale: 5, fillColor: '#059669', fillOpacity: 1, strokeWeight: 1, strokeColor: '#047857' }
+    // 대리점: 빨간 핀 + 번호 라벨 (하단 텍스트 없음)
+    sortedDealers.forEach((d) => {
       const m = new google.maps.Marker({
         position: { lat: d.lat, lng: d.lng },
         map: map.current,
         title: `${d.name} (${d.addr})`,
-        icon,
-        label: { text: d.name, color: '#111827', fontWeight: '600', fontSize: '12px' },
+        icon: pinIcon(google, { fill: '#ef4444', stroke: '#b91c1c', scale: 1.6 }),
+        label: {
+          text: String(d.rank),
+          color: '#ffffff',
+          fontWeight: '700',
+          fontSize: '12px',
+        },
+        zIndex: 600 - d.rank,
       })
       m.addListener('click', () => {
         infoWin.current.setContent(
-          `<div style="font-size:12px"><b>${d.name}</b><br/>${d.addr}<br/><span style="color:#6b7280">${d.type === 'repair' ? '수리' : '구매'} 대리점</span></div>`
+          `<div style="font-size:12px;line-height:1.4">
+             <div style="font-weight:700;margin-bottom:2px">#${d.rank} ${d.name}</div>
+             <div>${d.addr}</div>
+             <div>📞 ${d.phone || '-'}</div>
+             <div>🕘 ${d.hours || '-'}</div>
+             <div style="color:#6b7280;margin-top:4px">${d.type === 'repair' ? '제품 수리 대리점' : '구매 가능 대리점'}</div>
+           </div>`
         )
         infoWin.current.open(map.current, m)
       })
       markersById.current.set(d.id, m)
     })
-  }, [filteredDealers, currentPos, mapReady])
+  }, [sortedDealers, currentPos, mapReady])
 
-  // 부드럽게 이동/확대
+  /** 대한민국 영역으로 맞춤 */
+  const fitKoreaBounds = () => {
+    const google = googleRef.current
+    if (!google || !map.current) return
+    const b = new google.maps.LatLngBounds(
+      new google.maps.LatLng(SOUTH_KOREA_BOUNDS.south, SOUTH_KOREA_BOUNDS.west),
+      new google.maps.LatLng(SOUTH_KOREA_BOUNDS.north, SOUTH_KOREA_BOUNDS.east),
+    )
+    map.current.fitBounds(b, 20)
+    const z = map.current.getZoom()
+    if (z && z < 7) map.current.setZoom(7) // 최소 줌 보정
+  }
+
+  // 이동/확대
   const flyTo = (lat, lng, zoom = 15) => {
     if (!map.current) return
     map.current.panTo({ lat, lng })
     map.current.setZoom(zoom)
   }
 
-  // 리스트 클릭: 동일 동작(확대)
+  // 리스트 클릭 시 포커스
   const focusDealer = (dealer) => {
     const m = markersById.current.get(dealer.id)
     flyTo(dealer.lat, dealer.lng)
     if (m) {
       infoWin.current?.setContent(
-        `<div style="font-size:12px"><b>${dealer.name}</b><br/>${dealer.addr}<br/><span style="color:#6b7280">${
-          dealer.type === 'repair' ? '수리' : '구매'
-        } 대리점</span></div>`
+        `<div style="font-size:12px;line-height:1.4">
+           <div style="font-weight:700;margin-bottom:2px">#${dealer.rank} ${dealer.name}</div>
+           <div>${dealer.addr}</div>
+           <div>📞 ${dealer.phone || '-'}</div>
+           <div>🕘 ${dealer.hours || '-'}</div>
+           <div style="color:#6b7280;margin-top:4px">${dealer.type === 'repair' ? '제품 수리 대리점' : '구매 가능 대리점'}</div>
+         </div>`
       )
       infoWin.current?.open(map.current, m)
     }
   }
 
-  // ✅ 내 위치: 허용 시 위치로 확대 / 거부·실패 시 테헤란로 507로 확대
+  // 내 위치
   const handleLocateMe = () => {
     if (!navigator.geolocation) {
-      // 브라우저가 지원 안하면 기본 위치로
       setCurrentPos(DEFAULT_POS)
       if (country !== 'KR') setCountry('KR')
       flyTo(DEFAULT_POS.lat, DEFAULT_POS.lng, 15)
@@ -260,21 +303,13 @@ export default function Service() {
       (pos) => {
         const me = { lat: pos.coords.latitude, lng: pos.coords.longitude, label: '현재 위치' }
         setCurrentPos(me)
-
-        // 국가 전환이 발생해도 최종 확대가 유지되도록 플래그 저장
         lastActionRef.current = 'locate'
         lastLocatedPosRef.current = { lat: me.lat, lng: me.lng }
-
         const detected = detectCountry(me.lat, me.lng)
-        if (detected !== country) {
-          setCountry(detected)          // 국가가 바뀌면 country-effect가 끝에 flyTo를 다시 호출
-        } else {
-          flyTo(me.lat, me.lng, 15)     // 국가가 안 바뀌면 즉시 확대
-          lastActionRef.current = null
-        }
+        if (detected !== country) setCountry(detected)
+        else { flyTo(me.lat, me.lng, 15); lastActionRef.current = null }
       },
       () => {
-        // ❗동의 안 했거나 실패 → 기본 위치로 세팅/확대
         setCurrentPos(DEFAULT_POS)
         if (country !== 'KR') setCountry('KR')
         flyTo(DEFAULT_POS.lat, DEFAULT_POS.lng, 15)
@@ -283,7 +318,6 @@ export default function Service() {
     )
   }
 
-  // 버튼 스타일(선택/비선택) — Light/Dark 가독성
   const chipClass = (active, color) => {
     if (color === 'blue') {
       return active
@@ -291,7 +325,6 @@ export default function Service() {
         : '!bg-white !text-blue-700 !border-blue-600 hover:!bg-blue-50 ' +
           'dark:!bg-slate-800 dark:!text-blue-300 dark:!border-blue-400 dark:hover:!bg-slate-700'
     }
-    // emerald
     return active
       ? '!bg-emerald-600 !text-white !border-emerald-600 dark:!bg-emerald-500 dark:!border-emerald-400'
       : '!bg-white !text-emerald-700 !border-emerald-600 hover:!bg-emerald-50 ' +
@@ -318,8 +351,6 @@ export default function Service() {
                 {c.label}
               </Button>
             ))}
-
-            {/* 내 위치 */}
             <div className="ml-auto">
               <Button type="button" onClick={handleLocateMe} className="!bg-slate-900 !text-white dark:!bg-slate-700">
                 내 위치
@@ -327,12 +358,11 @@ export default function Service() {
             </div>
           </div>
 
-          {/* 타입 필터 */}
+          {/* 타입 필터 (전체 제거) */}
           <div className="mt-4 flex flex-wrap gap-2">
             {[
-              { key: 'all', label: '전체' },
               { key: 'repair', label: '제품 수리 대리점' },
-              { key: 'sales', label: '구매 가능 대리점' },
+              { key: 'sales',  label: '구매 가능 대리점' },
             ].map((f) => (
               <Button
                 key={f.key}
@@ -345,20 +375,13 @@ export default function Service() {
             ))}
           </div>
 
-          {/* 거리순 리스트 */}
+          {/* 가까운 순 리스트 */}
           <div className="mt-4" />
-          {typeFilter === 'all' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <DealerList title="제품 수리 대리점 (가까운 순)" items={topRepair} onPick={focusDealer} />
-              <DealerList title="구매 가능 대리점 (가까운 순)" items={topSales} onPick={focusDealer} />
-            </div>
-          ) : (
-            <DealerList
-              title={typeFilter === 'repair' ? '제품 수리 대리점 (가까운 순)' : '구매 가능 대리점 (가까운 순)'}
-              items={typeFilter === 'repair' ? topRepair : topSales}
-              onPick={focusDealer}
-            />
-          )}
+          <DealerList
+            title={`${typeFilter === 'repair' ? '제품 수리 대리점' : '구매 가능 대리점'} (가까운 순)`}
+            items={sortedDealers}
+            onPick={focusDealer}
+          />
         </Card>
 
         <Card title="지도">
@@ -373,7 +396,7 @@ export default function Service() {
   )
 }
 
-/** 공통 리스트 */
+/** 리스트(번호/주소/연락처/영업시간 포함) */
 function DealerList({ title, items, onPick }) {
   return (
     <div>
@@ -385,13 +408,20 @@ function DealerList({ title, items, onPick }) {
             type="button"
             onClick={() => onPick(d)}
             className="text-left px-3 py-2 rounded-lg border border-slate-300 hover:bg-slate-50
-                       dark:border-slate-600 dark:hover:bg-slate-700
-                       text-slate-800 dark:text-slate-100"
+                       dark:border-slate-600 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
             title={`${d.name} — ${d.addr}`}
           >
-            <div className="text-sm font-semibold">{d.name}</div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">
-              {d.addr} · {d.dist.toFixed(1)} km
+            <div className="flex items-start gap-2">
+              <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full text-xs font-bold bg-emerald-600 text-white dark:bg-emerald-500">
+                {d.rank}
+              </span>
+              <div className="flex-1">
+                <div className="text-sm font-semibold">{d.name}</div>
+                <div className="text-xs text-slate-600 dark:text-slate-400">{d.addr}</div>
+                <div className="text-xs text-slate-600 dark:text-slate-400">📞 {d.phone || '-'}</div>
+                <div className="text-xs text-slate-600 dark:text-slate-400">🕘 {d.hours || '-'}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{d.dist.toFixed(1)} km</div>
+              </div>
             </div>
           </button>
         ))}
