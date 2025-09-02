@@ -34,7 +34,7 @@ export default function Header(){
             <NavLinkItem to="/products" label="제품 조회" />   {/* ← 추가 */}
             <NavLinkItem to="/manuals" label="메뉴얼 검색" />
             <NavLinkItem to="/support" label="고객센터" />
-            <NavLinkItem to="/service" label="수리/대리점" />
+            <NavLinkItem to="/service" label="수리/구매 대리점" />
           </ul>
         </nav>
       </div>
