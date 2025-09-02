@@ -32,6 +32,7 @@ const makeItem = (o={}) => ({
   id: nextId++,
   status: '답변대기',          // '답변대기' | '답변완료'
   secret: false,               // 비밀글 여부
+  notifyOnAnswer: false,       // 답변 등록 시 이메일 알림 여부
   title: '제품 사용 관련 문의',
   content: '제품 사용 중 문의드립니다.',
   answer: '',
@@ -49,6 +50,7 @@ const seedData = () => {
     arr.push(makeItem({
       status: done? '답변완료':'답변대기',
       secret: i%5===0,
+      notifyOnAnswer: i%4===0, // 데모용 일부 true
       title: titles[i%titles.length],
       content: '간단한 문의 내용입니다. (데모)',
       answer: done? answers[i%answers.length] : '',
@@ -60,9 +62,15 @@ const seedData = () => {
 }
 /* 저장 크기 최소화를 위한 간단 압축 */
 const MINIFY = (it)=>({
-  id: it.id, status: it.status, secret: !!it.secret, title: it.title,
-  content: (it.content||'').slice(0,500), answer: (it.answer||'').slice(0,500),
-  authorEmail: it.authorEmail, createdAt: typeof it.createdAt==='number'? it.createdAt : new Date(it.createdAt).getTime()
+  id: it.id,
+  status: it.status,
+  secret: !!it.secret,
+  notifyOnAnswer: !!it.notifyOnAnswer,
+  title: it.title,
+  content: (it.content||'').slice(0,500),
+  answer: (it.answer||'').slice(0,500),
+  authorEmail: it.authorEmail,
+  createdAt: typeof it.createdAt==='number'? it.createdAt : new Date(it.createdAt).getTime()
 })
 
 /* sessionStorage 로드/세이브 + (레거시) 쿠키 폴백 로드 */
@@ -130,8 +138,19 @@ export default function Support(){
   const [showWrite, setShowWrite] = useState(false)  // 작성
   const [showMy, setShowMy] = useState(false)        // 나의 Q&A
 
-  const addItem = ({title,content,email,secret})=>{
-    setItems(prev=>[makeItem({status:'답변대기',title,content,authorEmail:email,secret:!!secret,createdAt:Date.now()}), ...prev])
+  const addItem = ({title,content,email,secret,notify})=>{
+    setItems(prev=>[
+      makeItem({
+        status:'답변대기',
+        title,
+        content,
+        authorEmail:email,
+        secret:!!secret,
+        notifyOnAnswer: !!notify,
+        createdAt:Date.now()
+      }),
+      ...prev
+    ])
     setShowWrite(false)
     setPage(1)
     alert('등록되었습니다. (데모)')
@@ -153,7 +172,7 @@ export default function Support(){
             <a href="mailto:support@example.com" className="font-semibold underline">support@example.com</a>
           </p>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={()=>setShowMy(true)}>나의 Q&amp;A 조회하기</Button>
+            <Button variant="secondary" onClick={()=>setShowMy(true)}>Q&amp;A 조회하기</Button>
             <Button onClick={()=>setShowWrite(true)}>Q&amp;A 작성하기</Button>
           </div>
         </div>
@@ -293,10 +312,13 @@ function DetailModal({ item, onClose }){
 
 /* ========= 작성 모달 ========= */
 function WriteModal({ onClose, onSubmit }){
+  const MAX_CONTENT = 10000
+
   const [title,setTitle]=useState('')
   const [content,setContent]=useState('')
   const [email,setEmail]=useState('')
   const [secret,setSecret]=useState(false)
+  const [notify,setNotify]=useState(true) // 기본값: 알림 받기
 
   const [code,setCode]=useState('')
   const [sentCode,setSentCode]=useState('')
@@ -312,7 +334,12 @@ function WriteModal({ onClose, onSubmit }){
     if(code && code===sentCode) setVerified(true)
     else { setVerified(false); alert('인증코드가 올바르지 않습니다.') }
   }
-  const canSubmit = title && content && email && verified
+
+  const canSubmit = title && content && content.length <= MAX_CONTENT && email && verified
+  const onChangeContent = (e) => {
+    const v = e.target.value
+    setContent(v.length > MAX_CONTENT ? v.slice(0, MAX_CONTENT) : v)
+  }
 
   return (
     <div className="fixed inset-0 z-[50]">
@@ -326,12 +353,33 @@ function WriteModal({ onClose, onSubmit }){
             </div>
             <div>
               <Label htmlFor="w-content">내용</Label>
-              <Textarea id="w-content" rows={6} value={content} onChange={(e)=>setContent(e.target.value)} placeholder="문의 내용을 입력하세요" />
+              <Textarea
+                id="w-content"
+                rows={6}
+                value={content}
+                onChange={onChangeContent}
+                placeholder="문의 내용을 입력하세요"
+                maxLength={MAX_CONTENT}
+                aria-describedby="w-content-help"
+              />
+              <div id="w-content-help" className="text-xs text-slate-500 mt-1">
+                {content.length.toLocaleString()} / {MAX_CONTENT.toLocaleString()}자
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <input id="w-secret" type="checkbox" className="w-4 h-4" checked={secret} onChange={e=>setSecret(e.target.checked)} />
-              <Label htmlFor="w-secret">비밀글</Label>
+
+            {/* 체크박스 라인: 비밀글 + 답변 알림 */}
+            <div className="flex flex-wrap items-center gap-4">
+              <label htmlFor="w-secret" className="inline-flex items-center gap-2 cursor-pointer">
+                <input id="w-secret" type="checkbox" className="w-4 h-4" checked={secret} onChange={e=>setSecret(e.target.checked)} />
+                <span>비밀글</span>
+              </label>
+
+              <label htmlFor="w-notify" className="inline-flex items-center gap-2 cursor-pointer">
+                <input id="w-notify" type="checkbox" className="w-4 h-4" checked={notify} onChange={e=>setNotify(e.target.checked)} />
+                <span>답변 등록 시 이메일 알림 받기</span>
+              </label>
             </div>
+
             <div className="grid md:grid-cols-[1fr_auto_auto] gap-2 items-end">
               <div>
                 <Label htmlFor="w-email">이메일</Label>
@@ -350,7 +398,7 @@ function WriteModal({ onClose, onSubmit }){
             )}
             <div className="flex gap-2 justify-end">
               <Button variant="secondary" onClick={onClose}>취소</Button>
-              <Button disabled={!canSubmit} onClick={()=>onSubmit({title,content,email,secret})}>등록</Button>
+              <Button disabled={!canSubmit} onClick={()=>onSubmit({title,content,email,secret,notify})}>등록</Button>
             </div>
           </div>
         </Card>
