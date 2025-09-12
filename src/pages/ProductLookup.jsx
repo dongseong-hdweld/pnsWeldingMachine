@@ -15,6 +15,42 @@ const CATEGORY_LABELS = {
   cool: 'Cooling',
 }
 
+/** 오너스 매뉴얼 지원 언어 (영어/한국어) */
+const LANGS = [
+  { code: 'en', label: 'English' },
+  { code: 'ko', label: '한국어' },
+]
+
+/** PDF 안내용 새 페이지로 이동할 URL 생성 (새 탭) */
+const buildPlaceholderUrl = (model, lang, action) =>
+  `/manuals/pdf-missing?model=${encodeURIComponent(model)}&lang=${encodeURIComponent(
+    lang
+  )}&action=${encodeURIComponent(action)}`
+
+/** 간단 모달 */
+function Modal({ title, children, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden />
+      <div className="relative z-10 w-[92vw] max-w-3xl rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex items-start justify-between gap-4">
+          <h3 className="text-lg font-semibold">{title}</h3>
+          <button
+            className="text-slate-500 hover:text-slate-700 dark:text-slate-300 dark:hover:text-slate-200"
+            onClick={onClose}
+          >
+            ✕
+          </button>
+        </div>
+        <div className="mt-3 text-sm text-slate-700 dark:text-slate-200 space-y-3">{children}</div>
+        <div className="mt-4 text-right">
+          <Button onClick={onClose}>닫기</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /** 바이트 포맷 */
 function formatSize(size) {
   if (typeof size !== 'number') return '-'
@@ -24,19 +60,33 @@ function formatSize(size) {
 }
 
 export default function ProductLookup() {
-  // 현재 인증 이메일
+  // 현재 인증 이메일 (페이지 상단 바)
   const [email, setEmail] = useState('')
   const [emailVerified, setEmailVerified] = useState(false)
 
-  // 이메일 변경/인증 UI
+  // 이메일 변경/인증 UI (페이지 상단 바)
   const [emailInput, setEmailInput] = useState('')
   const [emailSent, setEmailSent] = useState(false)
   const [emailCode, setEmailCode] = useState('')
   const [emailMsg, setEmailMsg] = useState('')
   const [emailErr, setEmailErr] = useState('')
 
-  // 등록 데이터
+  // 등록 데이터 (페이지 리스트)
   const [products, setProducts] = useState([])
+
+  // --- [추가] 내 등록 매뉴얼 모달 상태/로직 (Manuals.jsx와 동일 기능) ---
+  const [manOpen, setManOpen] = useState(false)
+  const [manEmail, setManEmail] = useState('')
+  const [manList, setManList] = useState([]) // 해당 이메일의 등록 제품 목록
+  const [manSelected, setManSelected] = useState(null) // 목록에서 클릭한 상세 아이템
+
+  const [manAuthMode, setManAuthMode] = useState(false)
+  const [manEmailInput, setManEmailInput] = useState('')
+  const [manEmailSent, setManEmailSent] = useState(false)
+  const [manEmailCode, setManEmailCode] = useState('')
+  const [manEmailVerified, setManEmailVerified] = useState(false)
+  const [manEmailMsg, setManEmailMsg] = useState('')
+  const [manEmailErr, setManEmailErr] = useState('')
 
   // 초기 로드: 최근 인증 이메일 -> 제품 로드
   useEffect(() => {
@@ -61,7 +111,7 @@ export default function ProductLookup() {
     }
   }
 
-  // 인증버튼 활성화 규칙: "현재 이메일과 동일하면 비활성화"
+  // 인증버튼 활성화 규칙: "현재 이메일과 동일하면 비활성화" (상단 바)
   const isSameAsCurrent =
     emailInput.trim().toLowerCase() === (email || '').trim().toLowerCase()
   const canSend = !!emailInput.trim() && !(emailVerified && isSameAsCurrent)
@@ -98,6 +148,75 @@ export default function ProductLookup() {
     }
   }
 
+  // --- [추가] 내 등록 매뉴얼 모달용 스토리지 로더 ---
+  const loadFromStore = () => {
+    try {
+      const store = JSON.parse(localStorage.getItem(STORE_KEY) || '{}')
+      const lastEmail = localStorage.getItem(LAST_EMAIL_KEY) || ''
+      return { store, lastEmail }
+    } catch {
+      return { store: {}, lastEmail: '' }
+    }
+  }
+
+  const loadMyProductsByEmail = (targetEmail) => {
+    const { store } = loadFromStore()
+    const list = targetEmail && store[targetEmail] ? store[targetEmail] : []
+    setManEmail(targetEmail)
+    setManList(Array.isArray(list) ? list : [])
+    setManSelected(null)
+  }
+
+  const openMyManuals = () => {
+    const { lastEmail } = loadFromStore()
+    setManOpen(true)
+    setManAuthMode(false)
+    setManEmailMsg('')
+    setManEmailErr('')
+    setManEmailSent(false)
+    setManEmailCode('')
+    setManEmailVerified(!!lastEmail)
+    setManEmailInput(lastEmail || '')
+    loadMyProductsByEmail(lastEmail || '')
+  }
+
+  // 모달 내 버튼 활성화 규칙
+  const manIsSameAsCurrent =
+    manEmailInput.trim().toLowerCase() === (manEmail || '').trim().toLowerCase()
+  const manCanSend = !!manEmailInput.trim() && !(manEmailVerified && manIsSameAsCurrent)
+  const manCanVerify = !!manEmailSent && !(manEmailVerified && manIsSameAsCurrent)
+
+  const handleSendEmailCodeManual = () => {
+    const val = manEmailInput.trim()
+    if (!val) {
+      setManEmailMsg('')
+      setManEmailErr('이메일을 입력하세요.')
+      return
+    }
+    setManEmailSent(true)
+    setManEmailVerified(false)
+    setManEmailErr('')
+    setManEmailMsg('인증번호가 전송되었습니다. (힌트: ABCDE)')
+  }
+
+  const handleVerifyEmailCodeManual = () => {
+    if (manEmailCode.trim().toUpperCase() === 'ABCDE') {
+      const val = manEmailInput.trim()
+      setManEmailVerified(true)
+      setManEmailErr('')
+      setManEmailMsg('이메일 인증이 완료되었습니다.')
+      try {
+        localStorage.setItem(LAST_EMAIL_KEY, val)
+      } catch {}
+      loadMyProductsByEmail(val)
+      setManAuthMode(false)
+    } else {
+      setManEmailVerified(false)
+      setManEmailMsg('')
+      setManEmailErr('인증코드가 올바르지 않습니다. (힌트: ABCDE)')
+    }
+  }
+
   return (
     <PageWrap title="제품 조회" subtitle="인증된 이메일로 등록한 제품을 확인">
       {/* 안내 + 이메일 변경/인증 바 */}
@@ -122,6 +241,13 @@ export default function ProductLookup() {
               <p className="text-slate-600 dark:text-slate-300">
                 이 페이지는 <b>인증된 이메일</b>에 등록된 제품을 카드 형태로 모두 보여줍니다.
               </p>
+            </div>
+
+            {/* [추가] 내 등록 매뉴얼 보기 버튼 */}
+            <div className="mt-2 md:mt-0">
+              <Button onClick={openMyManuals} title="등록된 제품의 매뉴얼을 한 곳에서 확인">
+                내 등록 매뉴얼 보기
+              </Button>
             </div>
           </div>
 
@@ -388,6 +514,191 @@ export default function ProductLookup() {
             )
           })}
         </div>
+      )}
+
+      {/* [추가] 내 등록 매뉴얼 보기 모달 (Manuals.jsx 기능 동일) */}
+      {manOpen && (
+        <Modal title="내 등록 매뉴얼" onClose={() => setManOpen(false)}>
+          {/* 현재 이메일 상태 + 변경 버튼 */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-slate-600 dark:text-slate-300">
+              현재 이메일: <b>{manEmail || '없음'}</b>{' '}
+              <span
+                className={[
+                  'ml-1 px-2 py-0.5 text-[11px] rounded-full border',
+                  manEmail
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                    : 'border-rose-300 bg-rose-50 text-rose-700',
+                ].join(' ')}
+              >
+                {manEmail ? '인증됨' : '미인증'}
+              </span>
+            </p>
+            <div className="flex items-center gap-2">
+              <a className="text-sm underline" href="/register" title="새 제품 등록">
+                등록 페이지로 이동
+              </a>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setManAuthMode((s) => !s)
+                  setManEmailMsg('')
+                  setManEmailErr('')
+                  setManEmailSent(false)
+                  setManEmailCode('')
+                  setManEmailInput(manEmail || '')
+                }}
+              >
+                {manAuthMode ? '닫기' : '이메일 변경/인증'}
+              </Button>
+            </div>
+          </div>
+
+          {/* 이메일 변경/인증 섹션 */}
+          {manAuthMode && (
+            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <Input
+                  type="email"
+                  value={manEmailInput}
+                  onChange={(e) => setManEmailInput(e.target.value)}
+                  placeholder="name@example.com"
+                />
+                <Button
+                  onClick={handleSendEmailCodeManual}
+                  disabled={!manCanSend}
+                  className={!manCanSend ? 'opacity-50 cursor-not-allowed' : ''}
+                >
+                  인증번호 요청
+                </Button>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={manEmailCode}
+                    onChange={(e) => setManEmailCode(e.target.value)}
+                    placeholder="인증코드 입력 (힌트: ABCDE)"
+                    disabled={!manEmailSent || (manEmailVerified && manIsSameAsCurrent)}
+                  />
+                  <Button
+                    onClick={handleVerifyEmailCodeManual}
+                    disabled={!manCanVerify}
+                    className={!manCanVerify ? 'opacity-50 cursor-not-allowed' : ''}
+                  >
+                    인증하기
+                  </Button>
+                </div>
+              </div>
+              {manEmailMsg && <p className="text-emerald-600 text-xs mt-1">{manEmailMsg}</p>}
+              {manEmailErr && <p className="text-rose-600 text-xs mt-1">{manEmailErr}</p>}
+              {!manEmailVerified && !manEmailMsg && !manEmailErr && (
+                <p className="text-slate-500 text-xs mt-1">
+                  * 테스트용 인증코드: <b>ABCDE</b>
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* 제품 목록 / 간단 상세 + 언어 액션 */}
+          {manList.length === 0 ? (
+            <p className="text-slate-600 dark:text-slate-300">
+              이 이메일로 등록된 제품이 없습니다. 먼저 제품 등록을 완료하세요.
+            </p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {manList.map((it, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setManSelected(it)}
+                    className={[
+                      'text-left rounded-lg border px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors',
+                      manSelected === it
+                        ? 'border-slate-400 dark:border-slate-500'
+                        : 'border-slate-200 dark:border-slate-700',
+                    ].join(' ')}
+                  >
+                    <div className="font-medium">
+                      {it.product?.productName || it.product?.model || '-'}
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      S/N: {it.product?.serial || '-'}
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      구매일: {it.product?.purchaseDate || '-'}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {manSelected && (
+                <div className="mt-4 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                  <div className="font-semibold mb-1">상세 정보</div>
+                  <dl className="grid grid-cols-3 gap-x-3 gap-y-1 text-sm">
+                    <dt className="text-slate-500 dark:text-slate-400">모델</dt>
+                    <dd className="col-span-2">
+                      {manSelected.product?.productName ||
+                        manSelected.product?.model ||
+                        '-'}
+                    </dd>
+                    <dt className="text-slate-500 dark:text-slate-400">시리얼</dt>
+                    <dd className="col-span-2">{manSelected.product?.serial || '-'}</dd>
+                    <dt className="text-slate-500 dark:text-slate-400">구매처</dt>
+                    <dd className="col-span-2">{manSelected.product?.vendor || '-'}</dd>
+                    <dt className="text-slate-500 dark:text-slate-400">등록일시</dt>
+                    <dd className="col-span-2">
+                      {manSelected.createdAt?.replace('T', ' ').replace('Z', ' UTC') || '-'}
+                    </dd>
+                  </dl>
+
+                  <div className="mt-3 font-medium">
+                    Owner’s Manual ({LANGS.length}개 언어)
+                  </div>
+                  <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {LANGS.map((lang) => (
+                      <div
+                        key={lang.code}
+                        className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700"
+                      >
+                        <div className="text-sm">{lang.label}</div>
+                        <div className="flex items-center gap-2">
+                          <a
+                            className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-1.5 text-sm bg-transparent transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 dark:border-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:focus-visible:ring-slate-600"
+                            href={buildPlaceholderUrl(
+                              manSelected.product?.productName ||
+                                manSelected.product?.model ||
+                                '-',
+                              lang.code,
+                              'view'
+                            )}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            새 탭에서 보기
+                          </a>
+                          <a
+                            className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-1.5 text-sm bg-transparent transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 dark:border-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:focus-visible:ring-slate-600"
+                            href={buildPlaceholderUrl(
+                              manSelected.product?.productName ||
+                                manSelected.product?.model ||
+                                '-',
+                              lang.code,
+                              'download'
+                            )}
+                            target="_blank"
+                            rel="noreferrer"
+                            download
+                          >
+                            다운로드
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </Modal>
       )}
     </PageWrap>
   )

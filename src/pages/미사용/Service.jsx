@@ -1,8 +1,8 @@
 // src/pages/Service.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import PageWrap from './_PageWrap.jsx'
-import Card from '../components/Card.jsx'
-import { Button } from '../components/FormControls.jsx'
+import PageWrap from '../_PageWrap.jsx'
+import Card from '../../components/Card.jsx'
+import { Button } from '../../components/FormControls.jsx'
 
 /** Google Maps JS API 동적 로딩 */
 const GMAPS_SRC =
