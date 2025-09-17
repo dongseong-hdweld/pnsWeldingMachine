@@ -1,7 +1,7 @@
 // src/pages/ManualsPdfPlaceholder.jsx
 import React from 'react'
-import PageWrap from './_PageWrap.jsx'
-import Card from '../components/Card.jsx'
+import PageWrap from '../_PageWrap.jsx'
+import Card from '../../components/Card.jsx'
 
 function useQuery() {
   const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')

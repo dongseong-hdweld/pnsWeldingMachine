@@ -1,6 +1,6 @@
 // src/pages/Home.jsx
 import React from 'react';
-import Footer from '../components/Footer.jsx';
+import Footer from '../../components/Footer.jsx';
 
 export default function Home() {
   return (

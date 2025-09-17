@@ -1,8 +1,8 @@
 // src/pages/ProductLookup.jsx
 import React, { useEffect, useState } from 'react'
-import PageWrap from './_PageWrap.jsx'
-import Card from '../components/Card.jsx'
-import { Input, Button } from '../components/FormControls.jsx'
+import PageWrap from '../_PageWrap.jsx'
+import Card from '../../components/Card.jsx'
+import { Input, Button } from '../../components/FormControls.jsx'
 
 /** 로컬 스토리지 키 (Register.jsx / Manuals.jsx와 동일) */
 const STORE_KEY = 'HYW_REG_PRODUCTS_BY_EMAIL'
@@ -463,19 +463,6 @@ export default function ProductLookup() {
                         </span>
                       </li>
 
-                      <li className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700">
-                        <span>홍보 문자(SMS) 수신</span>
-                        <span
-                          className={[
-                            'px-2 py-0.5 text-[11px] rounded-full border',
-                            priv.promoSms
-                              ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                              : 'border-rose-300 bg-rose-50 text-rose-700',
-                          ].join(' ')}
-                        >
-                          {priv.promoSms ? '동의' : '미동의'}
-                        </span>
-                      </li>
                     </ul>
                   </section>
 

@@ -1,12 +1,12 @@
-// src/pages/Register.jsx
+// src/pages/Register.en.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import PageWrap from './_PageWrap.jsx';
-import Card from '../components/Card.jsx';
-import { Label, Input, Textarea, Button } from '../components/FormControls.jsx';
-import COUNTRY_CODES from '../data/countryDialCodes.js';
+import PageWrap from '../_PageWrap.jsx';
+import Card from '../../components/Card.jsx';
+import { Label, Input, Textarea, Button } from '../../components/FormControls.jsx';
+import COUNTRY_CODES from '../../data/countryDialCodes.js';
 
-// ------- 전역 스토리지 키 & 유틸 --------
+// ------- Storage Keys & Utils --------
 const STORE_KEY = 'HYW_REG_PRODUCTS_BY_EMAIL';
 const LAST_EMAIL_KEY = 'HYW_LAST_VERIFIED_EMAIL';
 const loadStore = () => {
@@ -22,8 +22,8 @@ const saveStore = (obj) => {
   } catch {}
 };
 
-// ------- 임시 시리얼 → 제품 매핑(DB) --------
-// model: SAP 코드명 / productName: 모델명
+// ------- Temp Serial → Product Mapping (mock DB) --------
+// model: SAP code name / productName: display model
 const SERIAL_DB = {
   'HYW-T270-001': { category: 'power', productName: 'SUPER T270', model: 'DC TIG(SUPER T270)' },
   'HYW-T400-002': { category: 'power', productName: 'SUPER T400', model: 'DC TIG(SUPER T400)' },
@@ -32,14 +32,27 @@ const SERIAL_DB = {
   'HYW-COOL-005': { category: 'cool',  productName: 'SUPER COOLER', model: 'WATER COOLER(SUPER COOLER)' },
 };
 
-// ------- 분류 라벨(표시용) --------
+// ------- Category Labels (for display) --------
 const CATEGORY_LABELS = {
   wire: 'Wire Feeder',
   power: 'Power Source',
   cool: 'Cooling',
 };
 
-// ------- 보조 컴포넌트/유틸 --------
+// Common chip (fixed height, no wrap)
+const chipCls =
+  'inline-flex h-6 items-center justify-center px-2 rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700 text-[11px] leading-none whitespace-nowrap';
+
+// ✅ Consent chip style (same tone as ProductLookup)
+const chipChoice = (ok) =>
+  [
+    'px-2 py-0.5 text-[11px] rounded-full border',
+    ok
+      ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+      : 'border-rose-300 bg-rose-50 text-rose-700',
+  ].join(' ');
+
+// ------- Helpers / small components --------
 function StepChip({ index, current, setCurrent, label, locked }) {
   const isActive = current === index;
   const canGo = !locked;
@@ -56,7 +69,7 @@ function StepChip({ index, current, setCurrent, label, locked }) {
           ? 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
           : 'border-slate-200 bg-white/60 text-slate-400 pointer-events-none dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-600',
       ].join(' ')}
-      title={locked ? '이전 칸을 먼저 완료하세요' : ''}
+      title={locked ? 'Complete the previous step first' : ''}
     >
       <span className="inline-flex items-center justify-center w-5 h-5 rounded-full border mr-1 border-slate-300 dark:border-slate-600">
         {index}
@@ -85,7 +98,7 @@ function Modal({ title, children, onClose }) {
         </div>
         <div className="mt-3 text-sm text-slate-700 dark:text-slate-200 space-y-3">{children}</div>
         <div className="mt-4 text-right">
-          <Button onClick={onClose}>닫기</Button>
+          <Button onClick={onClose}>Close</Button>
         </div>
       </div>
     </div>
@@ -95,8 +108,8 @@ function Modal({ title, children, onClose }) {
 export default function Register() {
   const navigate = useNavigate();
 
-  // ----- 스텝 & 스크롤 -----
-  // 1: 고객정보 → 2: 제품 등록(시리얼만) → 3: 개인정보 동의 → 4: 확인
+  // ----- Steps & Scroll -----
+  // 1: Customer → 2: Product (Serial) → 3: Privacy Consent → 4: Review
   const [step, setStep] = useState(1);
   const s1Ref = useRef(null);
   const s2Ref = useRef(null);
@@ -114,10 +127,10 @@ export default function Register() {
     scrollToRefWithHeaderOffset(refs[step]);
   }, [step]);
 
-  // ----- 1) 고객정보 -----
+  // ----- 1) Customer info -----
   const [firstName, setFirstName] = useState('');
   const [surName, setSurName] = useState('');
-  const [phoneCode, setPhoneCode] = useState(''); // 선택 시 설정
+  const [phoneCode, setPhoneCode] = useState(''); // set on selection
   const [phoneLocal, setPhoneLocal] = useState('');
   const [selectedCountry, setSelectedCountry] = useState(null); // {name, code}
   const [email, setEmail] = useState('');
@@ -125,7 +138,7 @@ export default function Register() {
   const [address, setAddress] = useState('');
   const [optInEmail, setOptInEmail] = useState(false);
 
-  // ✅ 국가 선택 모달
+  // ✅ Country picker modal
   const [countryModalOpen, setCountryModalOpen] = useState(false);
   const [countryQuery, setCountryQuery] = useState('');
   const filteredCountries = useMemo(() => {
@@ -134,7 +147,7 @@ export default function Register() {
     return COUNTRY_CODES.filter((c) => c.name.toLowerCase().includes(k));
   }, [countryQuery]);
 
-  // 이메일 인증 상태 (+ 마지막 인증 이메일)
+  // Email verification state (+ last verified email)
   const [lastVerifiedEmail, setLastVerifiedEmail] = useState('');
   const [emailSent, setEmailSent] = useState(false);
   const [emailCode, setEmailCode] = useState('');
@@ -142,7 +155,7 @@ export default function Register() {
   const [emailMsg, setEmailMsg] = useState('');
   const [emailErr, setEmailErr] = useState('');
 
-  // mount 시 최근 인증 이메일 불러와서 동일하면 바로 인증 표시
+  // On mount: load last verified email; if same, mark as verified
   useEffect(() => {
     try {
       const last = localStorage.getItem(LAST_EMAIL_KEY) || '';
@@ -154,7 +167,7 @@ export default function Register() {
     } catch {}
   }, []);
 
-  // 이메일이 바뀌면 인증 상태 초기화(진행 메시지만 유지)
+  // If email changes, reset verification (keep progress messages)
   useEffect(() => {
     const same = (email || '').trim().toLowerCase() === (lastVerifiedEmail || '').trim().toLowerCase();
     if (!same && emailVerified) {
@@ -172,19 +185,19 @@ export default function Register() {
   const handleSendEmailCode = () => {
     if (!email.trim()) {
       setEmailMsg('');
-      setEmailErr('이메일을 먼저 입력하세요.');
+      setEmailErr('Please enter your email first.');
       return;
     }
     setEmailSent(true);
     setEmailVerified(false);
     setEmailErr('');
-    setEmailMsg('인증번호가 전송되었습니다. (힌트: ABCDE)');
+    setEmailMsg('Verification code sent. (Hint: ABCDE)');
   };
   const handleVerifyEmailCode = () => {
     if (emailCode.trim().toUpperCase() === 'ABCDE') {
       setEmailVerified(true);
       setEmailErr('');
-      setEmailMsg(''); // ✅ 완료 메시지는 통합 UI에서만 노출
+      setEmailMsg('');
       try {
         localStorage.setItem(LAST_EMAIL_KEY, email.trim());
         setLastVerifiedEmail(email.trim());
@@ -192,13 +205,13 @@ export default function Register() {
     } else {
       setEmailVerified(false);
       setEmailMsg('');
-      setEmailErr('인증코드가 올바르지 않습니다. (힌트: ABCDE)');
+      setEmailErr('Invalid code. (Hint: ABCDE)');
     }
   };
 
-  // ----- 2) 제품등록(시리얼 + 구매일자 + 구매처) -----
+  // ----- 2) Product registration (serial + purchase date + vendor) -----
   const [serialInput, setSerialInput] = useState('');
-  const [purchaseDateInput, setPurchaseDateInput] = useState(''); // 유지하여 다음 제품에 기본값 사용
+  const [purchaseDateInput, setPurchaseDateInput] = useState('');
   const [vendorInput, setVendorInput] = useState('');
   const [addedProducts, setAddedProducts] = useState([]); // [{serial, productName, model, category, purchaseDate, vendor}]
   const [serialMsg, setSerialMsg] = useState('');
@@ -218,24 +231,24 @@ export default function Register() {
   const addSerial = () => {
     const key = (serialInput || '').trim().toUpperCase();
     if (!key) {
-      setSerialMsg('시리얼을 입력하세요.');
+      setSerialMsg('Enter a serial number.');
       return;
     }
     const info = SERIAL_DB[key];
     if (!info) {
-      setSerialMsg('해당 시리얼이 없습니다.');
+      setSerialMsg('Serial not found.');
       return;
     }
     if (!purchaseDateInput) {
-      setSerialMsg('구매일자를 입력하세요.');
+      setSerialMsg('Enter the purchase date.');
       return;
     }
     if (!vendorInput.trim()) {
-      setSerialMsg('구매처를 입력하세요.');
+      setSerialMsg('Enter the vendor.');
       return;
     }
     if (addedProducts.some((p) => (p.serial || '').toUpperCase() === key)) {
-      setSerialMsg('이미 추가된 시리얼입니다.');
+      setSerialMsg('This serial is already added.');
       return;
     }
     setAddedProducts((prev) => [
@@ -249,24 +262,24 @@ export default function Register() {
         vendor: vendorInput.trim(),
       },
     ]);
-    setSerialInput(''); // 다음 추가를 위해 시리얼만 초기화, 구매일자/구매처는 유지(디폴트)
-    setSerialMsg('추가되었습니다.');
+    setSerialInput(''); // Keep date/vendor for the next item
+    setSerialMsg('Added.');
     setTimeout(() => setSerialMsg(''), 1200);
   };
   const removeSerial = (serial) => {
     setAddedProducts((prev) => prev.filter((p) => p.serial !== serial));
   };
 
-  // ----- 3) 개인정보 동의 -----
+  // ----- 3) Privacy consent -----
   const [consentService, setConsentService] = useState(false);
   const [consentXBorder, setConsentXBorder] = useState(false);
   const [consentMarketing, setConsentMarketing] = useState(false);
 
-  // 모달
+  // Modals
   const [showPolicy, setShowPolicy] = useState(false);
   const [showXBorder, setShowXBorder] = useState(false);
 
-  // ----- 유효성 / 빨간 강조 -----
+  // ----- Validation / Emphasis -----
   const [attempt1, setAttempt1] = useState(false);
   const [attempt2, setAttempt2] = useState(false);
   const [attempt3, setAttempt3] = useState(false);
@@ -278,28 +291,28 @@ export default function Register() {
     email.trim() &&
     address.trim() &&
     emailVerified &&
-    !!selectedCountry; // ✅ 국가 선택 강제
+    !!selectedCountry;
 
   const reasons1 = useMemo(() => {
     const r = [];
-    if (!firstName.trim()) r.push('First Name을 입력하세요.');
-    if (!surName.trim()) r.push('Sur Name을 입력하세요.');
-    if (!selectedCountry) r.push('국가/국가번호를 선택하세요.');
-    if (!phoneLocal.trim()) r.push('전화번호를 입력하세요.');
-    if (!email.trim()) r.push('이메일을 입력하세요.');
-    if (!emailVerified) r.push('이메일 인증이 필요합니다.');
-    if (!address.trim()) r.push('주소를 입력하세요.');
+    if (!firstName.trim()) r.push('Enter your First Name.');
+    if (!surName.trim()) r.push('Enter your Surname.');
+    if (!selectedCountry) r.push('Select your country/dialing code.');
+    if (!phoneLocal.trim()) r.push('Enter your phone number.');
+    if (!email.trim()) r.push('Enter your email.');
+    if (!emailVerified) r.push('Email verification is required.');
+    if (!address.trim()) r.push('Enter your address.');
     return r;
   }, [firstName, surName, phoneLocal, email, emailVerified, address, selectedCountry]);
 
   const validStep2 = addedProducts.length > 0;
   const reasons2 = useMemo(() => {
     const r = [];
-    if (addedProducts.length === 0) r.push('등록된 제품이 없습니다. 시리얼을 추가하세요.');
+    if (addedProducts.length === 0) r.push('No products added. Please add a serial.');
     const key = (serialInput || '').trim().toUpperCase();
-    if (key && !SERIAL_DB[key]) r.push('입력한 시리얼이 데이터베이스에 없습니다.');
+    if (key && !SERIAL_DB[key]) r.push('The entered serial does not exist in the database.');
     if (key && SERIAL_DB[key] && (!purchaseDateInput || !vendorInput)) {
-      r.push('시리얼 추가 전, 구매일자와 구매처를 입력하세요.');
+      r.push('Before adding, enter both Purchase Date and Vendor.');
     }
     return r;
   }, [addedProducts.length, serialInput, purchaseDateInput, vendorInput]);
@@ -307,9 +320,9 @@ export default function Register() {
   const validStep3 = consentService && consentXBorder && consentMarketing;
   const reasons3 = useMemo(() => {
     const r = [];
-    if (!consentService) r.push('보증 서비스 목적 처리에 동의해야 합니다.');
-    if (!consentXBorder) r.push('국외 이전 안내 확인에 동의해야 합니다.');
-    if (!consentMarketing) r.push('제품 공지/마케팅 수신(전체)에 동의해야 합니다.');
+    if (!consentService) r.push('You must agree to data processing for warranty service.');
+    if (!consentXBorder) r.push('You must confirm the cross-border transfer notice.');
+    if (!consentMarketing) r.push('You must agree to receive product notices/marketing (overall).');
     return r;
   }, [consentService, consentXBorder, consentMarketing]);
 
@@ -319,7 +332,7 @@ export default function Register() {
 
   const errorCls = 'border-rose-400 focus-visible:ring-rose-300';
 
-  // ----- 제출 -----
+  // ----- Submit -----
   const resetAll = () => {
     setStep(1);
     setFirstName('');
@@ -362,8 +375,8 @@ export default function Register() {
           const data = {
             product: {
               category: prod.category,
-              model: prod.model,            // SAP 코드명
-              productName: prod.productName,// 모델명
+              model: prod.model,            // SAP code
+              productName: prod.productName,// display model
               serial: prod.serial,
               purchaseDate: prod.purchaseDate,
               vendor: prod.vendor,
@@ -384,7 +397,7 @@ export default function Register() {
               consentService,
               consentXBorder,
               consentMarketing,
-              promoEmail: optInEmail,
+              promoEmail: optInEmail, // optional: email promotions
               promoSms: false,
             },
             createdAt: now,
@@ -396,29 +409,29 @@ export default function Register() {
         localStorage.setItem(LAST_EMAIL_KEY, key);
       }
     } catch (e) {
-      console.warn('등록 데이터 저장 실패:', e);
+      console.warn('Failed to save registration:', e);
     }
-    alert('등록이 완료되었습니다.');
+    alert('Registration completed.');
     resetAll();
     navigate('/');
   };
 
-  // 샘플 시리얼 목록
+  // Sample serials
   const sampleSerials = useMemo(() => Object.entries(SERIAL_DB), []);
 
   return (
-    <PageWrap title="제품 등록" subtitle="">
-      {/* 스텝 네비 */}
+    <PageWrap title="Product Registration" subtitle="">
+      {/* Step Nav */}
       <div className="mb-4 flex flex-wrap gap-2">
-        <StepChip index={1} current={step} setCurrent={setStep} label="고객정보" locked={false} />
-        <StepChip index={2} current={step} setCurrent={setStep} label="제품 등록(시리얼)" locked={locked2} />
-        <StepChip index={3} current={step} setCurrent={setStep} label="개인정보 동의" locked={locked3} />
-        <StepChip index={4} current={step} setCurrent={setStep} label="확인" locked={locked4} />
+        <StepChip index={1} current={step} setCurrent={setStep} label="Customer Info" locked={false} />
+        <StepChip index={2} current={step} setCurrent={setStep} label="Product (Serial)" locked={locked2} />
+        <StepChip index={3} current={step} setCurrent={setStep} label="Privacy Consent" locked={locked3} />
+        <StepChip index={4} current={step} setCurrent={setStep} label="Review" locked={locked4} />
       </div>
 
-      {/* 1) 고객정보 */}
+      {/* 1) Customer Info */}
       <div ref={s1Ref} className="h-0 scroll-mt-[84px]" />
-      <Card title="1. 고객정보">
+      <Card title="1. Customer Info">
         <div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
@@ -428,35 +441,36 @@ export default function Register() {
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 className={attempt1 && !firstName.trim() ? errorCls : ''}
-                placeholder="예: Gil-dong"
+                placeholder="e.g., Gil-dong"
               />
             </div>
             <div>
-              <Label htmlFor="sur">Sur Name</Label>
+              <Label htmlFor="sur">Surname</Label>
               <Input
                 id="sur"
                 value={surName}
                 onChange={(e) => setSurName(e.target.value)}
                 className={attempt1 && !surName.trim() ? errorCls : ''}
-                placeholder="예: Hong"
+                placeholder="e.g., Hong"
               />
             </div>
 
-            {/* ✅ 국가/국가번호: 모달로 강제 선택 (작고, 입력칸처럼 보이지 않게) */}
+            {/* ✅ Country / Dial code: force selection through modal */}
             <div className="md:col-span-2">
-              <Label>국가/국가번호 (필수)</Label>
+              <Label>Country / Dialing Code (Required)</Label>
               <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
                 <div
                   className={[
-                    'rounded-lg border bg-slate-50 px-3 text-xs h-8 flex items-center',
+                    'rounded-lg border px-3 text-xs h-8 flex items-center',
                     attempt1 && !selectedCountry ? 'border-rose-400' : 'border-slate-200 dark:border-slate-700',
-                    'text-slate-600 dark:text-slate-300',
+                    // Dark mode: darker tone; Light mode: default
+                    'bg-white text-slate-700 dark:bg-slate-900 dark:text-slate-200',
                   ].join(' ')}
                 >
                   {selectedCountry ? (
                     <span>{selectedCountry.name} ({selectedCountry.code})</span>
                   ) : (
-                    <span className="text-slate-400">국가를 선택하세요</span>
+                    <span className="text-slate-400">Select your country</span>
                   )}
                 </div>
                 <Button
@@ -466,36 +480,36 @@ export default function Register() {
                     setCountryModalOpen(true);
                   }}
                 >
-                  국가 선택
+                  Select Country
                 </Button>
               </div>
-              <p className="text-xs text-slate-500 mt-1">버튼을 눌러 검색 후 국가를 선택하세요.</p>
+              <p className="text-xs text-slate-500 mt-1">Click the button to search and choose your country.</p>
               {selectedCountry && (
                 <p className="text-xs text-slate-500 mt-1">
-                  선택된 국가번호: <b>{selectedCountry.code}</b>
+                  Selected dial code: <b>{selectedCountry.code}</b>
                 </p>
               )}
             </div>
 
             <div>
-              <Label htmlFor="phone">전화번호</Label>
+              <Label htmlFor="phone">Phone Number</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="phone"
                   value={phoneLocal}
                   onChange={(e) => setPhoneLocal(e.target.value)}
                   className={attempt1 && !phoneLocal.trim() ? errorCls : ''}
-                  placeholder="예: 10-1234-5678"
+                  placeholder="e.g., 10-1234-5678"
                 />
                 <span className="text-sm text-slate-500">
-                  {selectedCountry ? selectedCountry.code : '(국가번호 미선택)'}
+                  {selectedCountry ? selectedCountry.code : '(no dial code)'}
                 </span>
               </div>
             </div>
 
-            {/* 이메일 + 인증 */}
+            {/* Email + verification */}
             <div className="md:col-span-2">
-              <Label htmlFor="email">이메일</Label>
+              <Label htmlFor="email">Email</Label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <Input
                   id="email"
@@ -510,14 +524,14 @@ export default function Register() {
                   disabled={!canSendEmailCode}
                   className={!canSendEmailCode ? 'opacity-50 cursor-not-allowed' : ''}
                 >
-                  인증번호 요청
+                  Send Code
                 </Button>
                 <div className="flex items-center gap-2">
                   <Input
                     id="emailCode"
                     value={emailCode}
                     onChange={(e) => setEmailCode(e.target.value)}
-                    placeholder="인증코드 입력 (힌트: ABCDE)"
+                    placeholder="Enter code (Hint: ABCDE)"
                     disabled={!canVerify}
                     className={attempt1 && !emailVerified ? errorCls : ''}
                   />
@@ -526,43 +540,43 @@ export default function Register() {
                     disabled={!canVerify}
                     className={!canVerify ? 'opacity-50 cursor-not-allowed' : ''}
                   >
-                    인증하기
+                    Verify
                   </Button>
                 </div>
               </div>
 
-              {/* 안내/상태 메시지들 (✅ 완료 메시지 1종만 노출) */}
+              {/* Messages */}
               {emailVerified && (
-                <p className="text-sky-600 text-xs mt-1">이메일 인증이 완료되었습니다.</p>
+                <p className="text-sky-600 text-xs mt-1">Email verification completed.</p>
               )}
               {!emailVerified && emailMsg && <p className="text-emerald-600 text-xs mt-1">{emailMsg}</p>}
               {emailErr && <p className="text-rose-600 text-xs mt-1">{emailErr}</p>}
               {!emailVerified && !emailMsg && !emailErr && (
                 <p className="text-slate-500 dark:text-slate-300 text-xs mt-1">
-                  * 테스트용 인증코드: <strong>ABCDE</strong>
+                  * Test code: <strong>ABCDE</strong>
                 </p>
               )}
             </div>
 
             <div>
               <Label htmlFor="zip">ZIP Code</Label>
-              <Input id="zip" value={zip} onChange={(e) => setZip(e.target.value)} placeholder="예: 06236" />
+              <Input id="zip" value={zip} onChange={(e) => setZip(e.target.value)} placeholder="e.g., 06236" />
             </div>
             <div className="md:col-span-2">
-              <Label htmlFor="addr">주소(물건 사용 장소)</Label>
+              <Label htmlFor="addr">Address (where the product is used)</Label>
               <Textarea
                 id="addr"
                 rows={3}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 className={attempt1 && !address.trim() ? errorCls : ''}
-                placeholder="도로명, 동/호수, 도시, 국가 등"
+                placeholder="Street, unit, city, country, etc."
               />
             </div>
 
-            {/* (선택) 홍보 수신 동의 */}
+            {/* (Optional) Marketing opt-in */}
             <div className="md:col-span-2">
-              <Label>홍보/공지 수신 동의 (선택)</Label>
+              <Label>Marketing / Announcements Opt-in (Optional)</Label>
               <label className="inline-flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -570,7 +584,7 @@ export default function Register() {
                   onChange={(e) => setOptInEmail(e.target.checked)}
                   className="mt-0.5"
                 />
-                <span className="text-slate-700 dark:text-slate-200">이메일 수신 동의</span>
+                <span className="text-slate-700 dark:text-slate-200">Email promotions opt-in</span>
               </label>
             </div>
           </div>
@@ -584,7 +598,7 @@ export default function Register() {
               aria-disabled={!validStep1}
               className={!validStep1 ? 'opacity-60' : ''}
             >
-              다음(제품 등록)
+              Next (Product)
             </Button>
             {!validStep1 && attempt1 && reasons1.length > 0 && (
               <ul className="mt-2 list-disc pl-5 text-xs text-rose-600">
@@ -597,9 +611,9 @@ export default function Register() {
         </div>
       </Card>
 
-      {/* 2) 제품등록(시리얼 + 구매일자 + 구매처) */}
+      {/* 2) Product Registration */}
       <div ref={s2Ref} className="h-0 scroll-mt-[84px]" />
-      <Card title="2. 제품 등록 (시리얼 번호)">
+      <Card title="2. Product Registration (Serial No.)">
         <div className={step < 2 ? 'pointer-events-none opacity-60' : ''}>
           <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700 space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -608,7 +622,7 @@ export default function Register() {
                 value={serialInput}
                 maxLength={15}
                 onChange={(e) => setSerialInput((e.target.value || '').toUpperCase().slice(0, 15))}
-                placeholder="시리얼 입력 (예: HYW-T270-001)"
+                placeholder="Enter serial (e.g., HYW-T270-001)"
                 className={
                   (attempt2 && addedProducts.length === 0) ||
                   (serialInput && !resolved)
@@ -622,35 +636,35 @@ export default function Register() {
                 value={purchaseDateInput}
                 onChange={(e) => setPurchaseDateInput(e.target.value)}
                 className={!purchaseDateInput && serialInput ? errorCls : ''}
-                placeholder="구매일자"
+                placeholder="Purchase date"
               />
               <Input
                 id="vendor"
                 value={vendorInput}
                 onChange={(e) => setVendorInput(e.target.value)}
                 className={!vendorInput.trim() && serialInput ? errorCls : ''}
-                placeholder="구매처 (예: 현대 PNS 대리점)"
+                placeholder="Vendor (e.g., Hyundai PNS Dealer)"
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-2">
               <div className="flex items-center gap-2">
                 <Button onClick={addSerial} disabled={!canAddSerial} className={!canAddSerial ? 'opacity-50 cursor-not-allowed' : ''}>
-                  시리얼 추가
+                  Add Serial
                 </Button>
-                <a className="text-sm underline" href="/manuals" title="모델 매뉴얼 검색으로 이동">
-                  매뉴얼 검색
+                <a className="text-sm underline" href="/manuals" title="Go to manual search">
+                  Search Manuals
                 </a>
               </div>
               <div className="text-sm text-slate-600 dark:text-slate-300">
                 {resolved ? (
                   <span>
-                    모델: <b>{resolved.productName}</b> / SAP: <b>{resolved.model}</b>
+                    Model: <b>{resolved.productName}</b> / SAP: <b>{resolved.model}</b>
                   </span>
                 ) : serialInput ? (
-                  <span className="text-rose-600">해당 시리얼이 없습니다.</span>
+                  <span className="text-rose-600">Serial not found.</span>
                 ) : (
-                  <span className="text-slate-400">시리얼을 입력하면 자동으로 모델/SAP가 표시됩니다.</span>
+                  <span className="text-slate-400">Enter a serial to auto-fill Model/SAP.</span>
                 )}
               </div>
             </div>
@@ -658,36 +672,36 @@ export default function Register() {
             {serialMsg && (
               <p
                 className={`text-xs ${
-                  serialMsg.includes('추가') ? 'text-emerald-600' : 'text-rose-600'
+                  serialMsg.includes('Added') || serialMsg === 'Added.' ? 'text-emerald-600' : 'text-rose-600'
                 }`}
               >
                 {serialMsg}
               </p>
             )}
             <p className="text-xs text-slate-500">
-              * 첫 제품 등록 시 입력한 <b>구매일자/구매처</b>는 다음 제품을 추가할 때 기본값으로 유지됩니다.
+              * The first product’s <b>Purchase Date/Vendor</b> will be kept as defaults for subsequent items.
             </p>
           </div>
 
-          {/* ✅ 샘플 시리얼(프로토타입 안내) */}
+          {/* ✅ Sample Serials (prototype info) */}
           <div className="mt-3 rounded-xl border border-dashed border-slate-300 p-3 dark:border-slate-700">
-            <div className="text-sm font-medium mb-2">샘플 시리얼 (프로토타입 테스트용)</div>
+            <div className="text-sm font-medium mb-2">Sample Serials (for prototype)</div>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
               {sampleSerials.map(([sn, info]) => (
                 <li key={sn} className="rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700">
                   <div className="font-mono text-[13px]">{sn}</div>
                   <div className="text-xs text-slate-500">
-                    모델: {info.productName} · SAP: {info.model}
+                    Model: {info.productName} · SAP: {info.model}
                   </div>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* 추가된 제품 목록 */}
+          {/* Added products */}
           <div className="mt-3">
             {addedProducts.length === 0 ? (
-              <p className="text-sm text-slate-600 dark:text-slate-300">아직 추가된 제품이 없습니다. 시리얼을 입력해 추가하세요.</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">No products yet. Enter a serial to add.</p>
             ) : (
               <ul className="space-y-2">
                 {addedProducts.map((p) => (
@@ -700,11 +714,11 @@ export default function Register() {
                         {p.productName} <span className="text-slate-500">({CATEGORY_LABELS[p.category]})</span>
                       </div>
                       <div className="text-xs text-slate-500">
-                        SAP: {p.model} · S/N: {p.serial} · 구매일자: {p.purchaseDate || '-'} · 구매처: {p.vendor || '-'}
+                        SAP: {p.model} · S/N: {p.serial} · Purchase: {p.purchaseDate || '-'} · Vendor: {p.vendor || '-'}
                       </div>
                     </div>
                     <Button variant="secondary" onClick={() => removeSerial(p.serial)}>
-                      제거
+                      Remove
                     </Button>
                   </li>
                 ))}
@@ -713,7 +727,7 @@ export default function Register() {
           </div>
 
           <div className="mt-4 flex gap-2">
-            <Button onClick={() => setStep(1)}>이전(고객정보)</Button>
+            <Button onClick={() => setStep(1)}>Back (Customer)</Button>
             <Button
               onClick={() => {
                 if (validStep2) setStep(3);
@@ -722,7 +736,7 @@ export default function Register() {
               aria-disabled={!validStep2}
               className={!validStep2 ? 'opacity-60' : ''}
             >
-              다음(개인정보 동의)
+              Next (Privacy)
             </Button>
           </div>
           {!validStep2 && attempt2 && reasons2.length > 0 && (
@@ -735,9 +749,9 @@ export default function Register() {
         </div>
       </Card>
 
-      {/* 3) 개인정보 동의 */}
+      {/* 3) Privacy Consent */}
       <div ref={s3Ref} className="h-0 scroll-mt-[84px]" />
-      <Card title="3. 개인정보 처리 동의">
+      <Card title="3. Privacy Consent">
         <div className={step < 3 ? 'pointer-events-none opacity-60' : ''}>
           <div className="space-y-3 text-sm">
             <label className="flex items-start gap-2">
@@ -748,7 +762,7 @@ export default function Register() {
                 className="mt-1"
               />
               <span className={attempt3 && !consentService ? 'text-rose-600' : 'text-slate-700 dark:text-slate-200'}>
-                <strong className="font-semibold">[필수]</strong> 보증 서비스 이행을 위한 개인정보 처리에 동의합니다.
+                <strong className="font-semibold">[Required]</strong> I agree to the processing of my personal data to provide warranty services.
               </span>
             </label>
             <label className="flex items-start gap-2">
@@ -759,7 +773,7 @@ export default function Register() {
                 className="mt-1"
               />
               <span className={attempt3 && !consentXBorder ? 'text-rose-600' : 'text-slate-700 dark:text-slate-200'}>
-                <strong className="font-semibold">[필수]</strong> 서비스 제공을 위한 국외 이전 가능성에 대한 안내를 확인했습니다.
+                <strong className="font-semibold">[Required]</strong> I confirm that I have read the notice on possible cross-border data transfers.
               </span>
             </label>
             <label className="flex items-start gap-2">
@@ -770,25 +784,25 @@ export default function Register() {
                 className="mt-1"
               />
               <span className={attempt3 && !consentMarketing ? 'text-rose-600' : 'text-slate-700 dark:text-slate-200'}>
-                <strong className="font-semibold">[필수]</strong> 제품 공지/마케팅 수신(전체)에 동의합니다.
+                <strong className="font-semibold">[Required]</strong> I agree to receive product notices/marketing (overall).
               </span>
             </label>
 
             <p className="text-slate-500 dark:text-slate-300 text-xs">
-              세부 내용은{' '}
+              For details, see the{' '}
               <button type="button" className="underline" onClick={() => setShowPolicy(true)}>
-                개인정보 처리방침
+                Privacy Policy
               </button>{' '}
-              및{' '}
+              and{' '}
               <button type="button" className="underline" onClick={() => setShowXBorder(true)}>
-                국외이전 고지
-              </button>{' '}
-              를 참고하세요.
+                Cross-border Transfer Notice
+              </button>
+              .
             </p>
           </div>
 
           <div className="mt-4">
-            <Button onClick={() => setStep(2)}>이전(제품 등록)</Button>
+            <Button onClick={() => setStep(2)}>Back (Product)</Button>
             <Button
               onClick={() => {
                 if (validStep3) setStep(4);
@@ -797,7 +811,7 @@ export default function Register() {
               aria-disabled={!validStep3}
               className={!validStep3 ? 'opacity-60' : ''}
             >
-              다음(확인)
+              Next (Review)
             </Button>
             {!validStep3 && attempt3 && reasons3.length > 0 && (
               <ul className="mt-2 list-disc pl-5 text-xs text-rose-600">
@@ -810,36 +824,39 @@ export default function Register() {
         </div>
       </Card>
 
-      {/* 4) 확인 */}
+      {/* 4) Review */}
       <div ref={s4Ref} className="h-0 scroll-mt-[84px]" />
-      <Card title="4. 입력 내용 확인">
+      <Card title="4. Review Your Entries">
         <div className={step < 4 ? 'pointer-events-none opacity-60' : ''}>
-          {/* 고객 요약 */}
+          {/* Customer summary */}
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-            <h4 className="font-semibold flex items-center gap-2"><span>🙍</span> 고객정보</h4>
+            <h4 className="font-semibold flex items-center gap-2"><span>🙍</span> Customer</h4>
             <dl className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2 text-sm">
-              <dt className="text-slate-500 dark:text-slate-300">이름</dt>
+              <dt className="text-slate-500 dark:text-slate-300">Name</dt>
               <dd className="col-span-2">{firstName} {surName}</dd>
-              <dt className="text-slate-500 dark:text-slate-300">전화</dt>
+              <dt className="text-slate-500 dark:text-slate-300">Phone</dt>
               <dd className="col-span-2">{selectedCountry?.code || ''} {phoneLocal}</dd>
-              <dt className="text-slate-500 dark:text-slate-300">국가</dt>
+              <dt className="text-slate-500 dark:text-slate-300">Country</dt>
               <dd className="col-span-2">{selectedCountry?.name || '-'}</dd>
-              <dt className="text-slate-500 dark:text-slate-300">이메일</dt>
-              <dd className="col-span-2">{email} <span className="ml-1 px-2 py-0.5 text-[11px] rounded-full border border-sky-300 bg-sky-50 text-sky-700">인증 완료</span></dd>
+              <dt className="text-slate-500 dark:text-slate-300">Email</dt>
+              <dd className="col-span-2">
+                {email}{' '}
+                <span className={chipCls}>Verified</span>
+              </dd>
               <dt className="text-slate-500 dark:text-slate-300">ZIP</dt>
               <dd className="col-span-2">{zip || '-'}</dd>
-              <dt className="text-slate-500 dark:text-slate-300">주소</dt>
+              <dt className="text-slate-500 dark:text-slate-300">Address</dt>
               <dd className="col-span-2 break-words">{address}</dd>
-              <dt className="text-slate-500 dark:text-slate-300">홍보 이메일</dt>
-              <dd className="col-span-2">{optInEmail ? '동의' : '미동의'}</dd>
+              <dt className="text-slate-500 dark:text-slate-300">Email Promotions</dt>
+              <dd className="col-span-2">{optInEmail ? 'Opt-in' : 'Not opted-in'}</dd>
             </dl>
           </section>
 
-          {/* 제품 요약 */}
+          {/* Product summary */}
           <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-            <h4 className="font-semibold flex items-center gap-2"><span>📦</span> 등록 제품</h4>
+            <h4 className="font-semibold flex items-center gap-2"><span>📦</span> Registered Products</h4>
             {addedProducts.length === 0 ? (
-              <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">등록된 제품이 없습니다.</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">No products.</p>
             ) : (
               <ul className="mt-2 space-y-2">
                 {addedProducts.map((p) => (
@@ -848,7 +865,7 @@ export default function Register() {
                       {p.productName} <span className="text-slate-500">({CATEGORY_LABELS[p.category]})</span>
                     </div>
                     <div className="text-xs text-slate-500">
-                      SAP: {p.model} · S/N: {p.serial} · 구매일자: {p.purchaseDate || '-'} · 구매처: {p.vendor || '-'}
+                      SAP: {p.model} · S/N: {p.serial} · Purchase: {p.purchaseDate || '-'} · Vendor: {p.vendor || '-'}
                     </div>
                   </li>
                 ))}
@@ -856,45 +873,50 @@ export default function Register() {
             )}
           </section>
 
-          {/* 개인정보 동의 요약 */}
+          {/* Privacy consent summary (ProductLookup style) */}
           <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-            <h4 className="font-semibold flex items-center gap-2"><span>🔒</span> 개인정보 동의</h4>
+            <h4 className="font-semibold flex items-center gap-2"><span>🔒</span> Privacy Consent</h4>
             <ul className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
               <li className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700">
-                <span>보증 서비스 목적 처리</span>
-                <span className="px-2 py-0.5 text-[11px] rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700">{consentService ? '동의' : '미동의'}</span>
+                <span>Processing for warranty service</span>
+                <span className={chipChoice(consentService)}>{consentService ? 'Agreed' : 'Not agreed'}</span>
               </li>
               <li className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700">
-                <span>국외 이전 안내 확인</span>
-                <span className="px-2 py-0.5 text-[11px] rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700">{consentXBorder ? '확인' : '미확인'}</span>
+                <span>Cross-border transfer notice</span>
+                <span className={chipChoice(consentXBorder)}>{consentXBorder ? 'Confirmed' : 'Not confirmed'}</span>
               </li>
               <li className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700">
-                <span>제품 공지/마케팅 수신(전체)</span>
-                <span className="px-2 py-0.5 text-[11px] rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700">{consentMarketing ? '동의' : '미동의'}</span>
+                <span>Product notices / marketing</span>
+                <span className={chipChoice(consentMarketing)}>{consentMarketing ? 'Agreed' : 'Not agreed'}</span>
+              </li>
+              {/* Channel-specific */}
+              <li className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700">
+                <span>Email promotions</span>
+                <span className={chipChoice(optInEmail)}>{optInEmail ? 'Opt-in' : 'Not opted-in'}</span>
               </li>
             </ul>
 
             <div className="mt-5 flex items-center justify-between">
-              <Button onClick={() => setStep(3)}>이전(개인정보 동의)</Button>
+              <Button onClick={() => setStep(3)}>Back (Privacy)</Button>
               <Button onClick={handleSubmit} disabled={addedProducts.length === 0}>
-                등록 완료
+                Submit
               </Button>
             </div>
             {addedProducts.length === 0 && (
-              <p className="mt-2 text-xs text-rose-600">최소 1개 이상의 제품을 등록해야 합니다.</p>
+              <p className="mt-2 text-xs text-rose-600">Please register at least one product.</p>
             )}
           </section>
         </div>
       </Card>
 
-      {/* 국가 선택 모달 */}
+      {/* Country modal */}
       {countryModalOpen && (
-        <Modal title="국가/국가번호 선택" onClose={() => setCountryModalOpen(false)}>
+        <Modal title="Select Country / Dialing Code" onClose={() => setCountryModalOpen(false)}>
           <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
             <Input
               value={countryQuery}
               onChange={(e) => setCountryQuery(e.target.value)}
-              placeholder="검색 (예: Korea, Japan, United...)"
+              placeholder="Search (e.g., Korea, Japan, United...)"
               autoFocus
             />
             <Button
@@ -902,21 +924,21 @@ export default function Register() {
               onClick={() => {
                 setCountryQuery('');
               }}
-              title="검색어 지우기"
+              title="Clear search"
             >
-              지우기
+              Clear
             </Button>
           </div>
           <div className="max-h-72 overflow-auto rounded-lg border border-slate-200 dark:border-slate-700 mt-2">
             {filteredCountries.length === 0 ? (
-              <p className="p-3 text-sm text-slate-500">검색 결과가 없습니다.</p>
+              <p className="p-3 text-sm text-slate-500">No results.</p>
             ) : (
               <ul className="divide-y divide-slate-200 dark:divide-slate-700">
                 {filteredCountries.map((c) => (
                   <li key={`${c.name}-${c.code}`}>
                     <button
                       type="button"
-                      className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800"
+                      className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                       onClick={() => {
                         setSelectedCountry(c);
                         setPhoneCode(c.code);
@@ -934,24 +956,24 @@ export default function Register() {
         </Modal>
       )}
 
-      {/* 기타 모달들 */}
+      {/* Other modals */}
       {showPolicy && (
-        <Modal title="개인정보 처리방침 (요약)" onClose={() => setShowPolicy(false)}>
-          <p>수집항목: 이름, 전화번호, 이메일, 주소, 제품정보(모델/시리얼), 첨부문서.</p>
-          <p>수집/이용 목적: 보증 등록 및 서비스 제공, 고객지원, 안전/업데이트 공지, 법적 의무 준수.</p>
-          <p>보관기간: 관련 법령 또는 서비스 관계 유지 기간 동안 보관 후 파기.</p>
-          <p>제3자 제공/처리위탁: 공식 대리점/수리센터/클라우드 제공사 등 (필요 범위 내).</p>
-          <p>권리: 열람, 정정, 삭제, 처리정지, 수신거부 등 요청 가능.</p>
-          <p>문의: privacy@example.com</p>
+        <Modal title="Privacy Policy (Summary)" onClose={() => setShowPolicy(false)}>
+          <p>Data collected: name, phone number, email, address, product info (model/serial), attachments.</p>
+          <p>Purpose: warranty registration & service, customer support, safety/updates, legal compliance.</p>
+          <p>Retention: stored for the duration required by law or service relationship, then destroyed.</p>
+          <p>Third parties / processors: authorized dealers/repair centers/cloud providers (limited to necessity).</p>
+          <p>Rights: access, rectification, deletion, restriction, opt-out, etc.</p>
+          <p>Contact: privacy@example.com</p>
         </Modal>
       )}
       {showXBorder && (
-        <Modal title="개인정보 국외 이전 고지 (요약)" onClose={() => setShowXBorder(false)}>
-          <p>이전 대상: 해외 본사/서비스센터 및 클라우드 인프라.</p>
-          <p>이전 목적: 보증 이행, 기술지원 및 품질 개선.</p>
-          <p>보호조치: 표준계약조항(SCC), 암호화, 접근통제, 최소수집.</p>
-          <p>보관기간: 목적 달성 시 또는 법정 보관기간 경과 시 파기.</p>
-          <p>문의: privacy@example.com</p>
+        <Modal title="Cross-border Transfer Notice (Summary)" onClose={() => setShowXBorder(false)}>
+          <p>Recipients: overseas HQ/service centers and cloud infrastructure.</p>
+          <p>Purpose: warranty, technical support, quality improvement.</p>
+          <p>Safeguards: SCCs, encryption, access controls, data minimization.</p>
+          <p>Retention: destroyed upon fulfillment of purpose or after statutory period.</p>
+          <p>Contact: privacy@example.com</p>
         </Modal>
       )}
     </PageWrap>

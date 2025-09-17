@@ -1,7 +1,8 @@
+// src/pages/ko/Support.jsx
 import React, { useEffect, useMemo, useState } from 'react'
-import PageWrap from './_PageWrap.jsx'
-import Card from '../components/Card.jsx'
-import { Label, Input, Textarea, Button } from '../components/FormControls.jsx'
+import PageWrap from '../_PageWrap.jsx'
+import Card from '../../components/Card.jsx'
+import { Label, Input, Textarea, Button } from '../../components/FormControls.jsx'
 
 /* ========= 유틸 ========= */
 const maskEmail = (email) => {
@@ -15,7 +16,7 @@ const fmtDate = (d) => {
   return `${dt.getFullYear()}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')}`
 }
 
-/* ========= 저장소: sessionStorage 사용 (브라우저/탭 종료 시 삭제, F5 유지) ========= */
+/* ========= 저장소: sessionStorage ========= */
 const STORAGE_KEY = 'qa_proto_items_v2'
 
 // (레거시) 안전한 쿠키 읽기 (있으면 1회만 가져와서 sessionStorage로 이주)
@@ -26,13 +27,36 @@ const getCookie = (name) => {
   return null
 }
 
+/* ========= 레거시 → boolean 정규화 ========= */
+// 문자열 상태 → boolean 파싱 (모르면 undefined)
+const parseAnswered = (status) => {
+  if (!status || typeof status !== 'string') return undefined
+  const s = status.trim().toLowerCase()
+  if (['답변완료', '완료', 'answered'].includes(s)) return true
+  if (['답변대기', '대기', 'pending'].includes(s)) return false
+  return undefined
+}
+
+// 레거시 아이템을 { answered: boolean }으로 통일
+const normalizeLegacy = (arr) =>
+  arr.map((it) => {
+    const hasAnswerText = !!(it.answer && String(it.answer).trim())
+    if (typeof it.answered === 'boolean') {
+      return { ...it, answered: it.answered || hasAnswerText }
+    }
+    const parsed = parseAnswered(it.status)
+    const answered = (parsed !== undefined) ? parsed : hasAnswerText
+    const { status, ...rest } = it
+    return { ...rest, answered }
+  })
+
 /* ========= 목 데이터 ========= */
 let nextId = 1
 const makeItem = (o={}) => ({
   id: nextId++,
-  status: '답변대기',          // '답변대기' | '답변완료'
-  secret: false,               // 비밀글 여부
-  notifyOnAnswer: false,       // 답변 등록 시 이메일 알림 여부
+  answered: false,            // ✅ 문자열 대신 boolean만 저장
+  secret: false,
+  notifyOnAnswer: false,
   title: '제품 사용 관련 문의',
   content: '제품 사용 중 문의드립니다.',
   answer: '',
@@ -48,22 +72,23 @@ const seedData = () => {
   for(let i=0;i<30;i++){
     const done = i%3===0
     arr.push(makeItem({
-      status: done? '답변완료':'답변대기',
+      answered: done,
       secret: i%5===0,
-      notifyOnAnswer: i%4===0, // 데모용 일부 true
+      notifyOnAnswer: i%4===0,
       title: titles[i%titles.length],
       content: '간단한 문의 내용입니다. (데모)',
-      answer: done? answers[i%answers.length] : '',
+      answer: done ? answers[i%answers.length] : '',
       authorEmail: emails[i%emails.length],
       createdAt: Date.now() - i*1000*60*60*18
     }))
   }
   return arr
 }
-/* 저장 크기 최소화를 위한 간단 압축 */
+
+/* 저장 크기 최소화를 위한 압축 */
 const MINIFY = (it)=>({
   id: it.id,
-  status: it.status,
+  answered: !!it.answered, // ✅ boolean만 저장
   secret: !!it.secret,
   notifyOnAnswer: !!it.notifyOnAnswer,
   title: it.title,
@@ -78,9 +103,11 @@ const loadItems = () => {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY)
     if (raw) {
-      const arr = JSON.parse(raw)
+      const arr = normalizeLegacy(JSON.parse(raw))
       const maxId = arr.reduce((m,x)=>Math.max(m, x.id||0), 0)
       nextId = Math.max(1, maxId+1)
+      // 정규화된 형태로 다시 저장(레거시 status 제거)
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(arr.map(MINIFY)))
       return arr
     }
   } catch {}
@@ -88,8 +115,8 @@ const loadItems = () => {
   try {
     const legacy = getCookie('qa_proto_items')
     if (legacy) {
-      const arr = JSON.parse(decodeURIComponent(legacy))
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(arr))
+      const arr = normalizeLegacy(JSON.parse(decodeURIComponent(legacy)))
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(arr.map(MINIFY)))
       const maxId = arr.reduce((m,x)=>Math.max(m, x.id||0), 0)
       nextId = Math.max(1, maxId+1)
       return arr
@@ -97,13 +124,12 @@ const loadItems = () => {
   } catch {}
   // 없으면 시드
   const seeded = seedData()
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(seeded))
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(seeded.map(MINIFY)))
   return seeded
 }
 const saveItems = (items) => {
   try {
-    const compact = items.map(MINIFY)
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(compact))
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(items.map(MINIFY)))
   } catch (e) {
     console.warn('[Q&A] sessionStorage 저장 실패:', e)
   }
@@ -141,7 +167,7 @@ export default function Support(){
   const addItem = ({title,content,email,secret,notify})=>{
     setItems(prev=>[
       makeItem({
-        status:'답변대기',
+        answered:false, // 새 글은 기본 '대기'
         title,
         content,
         authorEmail:email,
@@ -197,7 +223,16 @@ export default function Support(){
                     onClick={()=>setDetail(row)}
                     title="상세 보기">
                   <td className="py-3 pl-2 font-semibold">
-                    <span className={row.status==='답변완료'?'text-emerald-600':'text-amber-600'}>{row.status}</span>
+                    {(() => {
+                      const isAnswered = (typeof row.answered === 'boolean')
+                        ? (row.answered || !!(row.answer && String(row.answer).trim()))
+                        : !!(row.answer && String(row.answer).trim())
+                      return (
+                        <span className={isAnswered ? 'text-emerald-600' : 'text-amber-600'}>
+                          {isAnswered ? '답변완료' : '답변대기'}
+                        </span>
+                      )
+                    })()}
                   </td>
                   <td className="py-3">
                     {row.secret && <SecretBadge/>}
@@ -211,12 +246,15 @@ export default function Support(){
           </table>
         </div>
 
-        {/* 페이징 */}
+        {/* 페이징 (영문 버전과 동일한 색상 규칙) */}
         <div className="flex items-center justify-center gap-2 mt-4">
           <Button variant="secondary" disabled={page===1} onClick={()=>setPage(p=>Math.max(1,p-1))}>이전</Button>
           {Array.from({length: totalPages}).map((_,i)=>{
             const n=i+1
-            const cls='px-3 py-2 rounded-md border '+(n===page?'border-slate-900 bg-slate-900 text-white':'border-slate-300 bg-white dark:bg-slate-800 dark:border-slate-600')
+            const cls='px-3 py-2 rounded-md border '
+              + (n===page
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-300 bg-white dark:bg-slate-800 dark:border-slate-600')
             return <button key={n} className={cls} onClick={()=>setPage(n)}>{n}</button>
           })}
           <Button variant="secondary" disabled={page===totalPages} onClick={()=>setPage(p=>Math.min(totalPages,p+1))}>다음</Button>
@@ -253,6 +291,10 @@ function DetailModal({ item, onClose }){
     else { setVerified(false); alert('인증코드가 올바르지 않습니다.') }
   }
 
+  const isAnswered = (typeof item.answered === 'boolean')
+    ? (item.answered || !!(item.answer && String(item.answer).trim()))
+    : !!(item.answer && String(item.answer).trim())
+
   return (
     <div className="fixed inset-0 z-[60]">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose}/>
@@ -266,12 +308,15 @@ function DetailModal({ item, onClose }){
             <Button variant="secondary" onClick={onClose}>닫기</Button>
           </div>
           <div className="text-xs text-slate-500 mt-1">
-            상태: <span className={item.status==='답변완료'?'text-emerald-600':'text-amber-600'}>{item.status}</span>
+            상태:{' '}
+            <span className={isAnswered ? 'text-emerald-600' : 'text-amber-600'}>
+              {isAnswered ? '답변완료' : '답변대기'}
+            </span>
             <span className="mx-2">•</span>작성자: {maskEmail(item.authorEmail)}
             <span className="mx-2">•</span>작성일: {fmtDate(item.createdAt)}
           </div>
 
-          {(!canView) && (
+          {!canView && (
             <div className="mt-4">
               <div className="text-slate-600 dark:text-slate-300 text-sm mb-2">
                 비밀글입니다. 작성자 이메일과 인증을 완료하면 내용을 볼 수 있습니다.
@@ -446,7 +491,16 @@ function MyModal({ items, onClose, onOpenDetail }){
                       onClick={()=>onOpenDetail(row)}
                   >
                     <td className="py-3 pl-2 font-semibold">
-                      <span className={row.status==='답변완료'?'text-emerald-600':'text-amber-600'}>{row.status}</span>
+                      {(() => {
+                        const isAnswered = (typeof row.answered === 'boolean')
+                          ? (row.answered || !!(row.answer && String(row.answer).trim()))
+                          : !!(row.answer && String(row.answer).trim())
+                        return (
+                          <span className={isAnswered ? 'text-emerald-600' : 'text-amber-600'}>
+                            {isAnswered ? '답변완료' : '답변대기'}
+                          </span>
+                        )
+                      })()}
                     </td>
                     <td className="py-3">
                       {row.secret && <SecretBadge/>}
