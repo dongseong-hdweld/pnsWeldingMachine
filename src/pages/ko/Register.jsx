@@ -652,9 +652,6 @@ export default function Register() {
                 <Button onClick={addSerial} disabled={!canAddSerial} className={!canAddSerial ? 'opacity-50 cursor-not-allowed' : ''}>
                   시리얼 추가
                 </Button>
-                <a className="text-sm underline" href="/manuals" title="모델 매뉴얼 검색으로 이동">
-                  매뉴얼 검색
-                </a>
               </div>
               <div className="text-sm text-slate-600 dark:text-slate-300">
                 {resolved ? (

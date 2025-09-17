@@ -652,9 +652,6 @@ export default function Register() {
                 <Button onClick={addSerial} disabled={!canAddSerial} className={!canAddSerial ? 'opacity-50 cursor-not-allowed' : ''}>
                   Add Serial
                 </Button>
-                <a className="text-sm underline" href="/manuals" title="Go to manual search">
-                  Search Manuals
-                </a>
               </div>
               <div className="text-sm text-slate-600 dark:text-slate-300">
                 {resolved ? (
