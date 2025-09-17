@@ -1,6 +1,5 @@
 // src/pages/eng/ProductLookup.jsx
 import React, { useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
 import PageWrap from '../_PageWrap.jsx'
 import Card from '../../components/Card.jsx'
 import { Input, Button } from '../../components/FormControls.jsx'
@@ -16,15 +15,9 @@ const CATEGORY_LABELS = {
   cool: 'Cooling',
 }
 
-/** Owner’s manual supported languages (English/Korean) */
-const LANGS = [
-  { code: 'en', label: 'English' },
-  { code: 'ko', label: 'Korean' },
-]
-
 /** Build URL for the "PDF missing" placeholder page (new tab) */
-const buildPlaceholderUrl = (base, model, lang, action) =>
-  `${base}/manuals/pdf-missing?model=${encodeURIComponent(model)}&lang=${encodeURIComponent(
+const buildPlaceholderUrl = (model, lang, action) =>
+  `/manuals/pdf-missing?model=${encodeURIComponent(model)}&lang=${encodeURIComponent(
     lang
   )}&action=${encodeURIComponent(action)}`
 
@@ -61,28 +54,24 @@ function formatSize(size) {
 }
 
 export default function ProductLookup() {
-  const { pathname } = useLocation()
-  const isEN = pathname.startsWith('/en')
-  const base = isEN ? '/en' : '/ko'
-
   // Current verified email (top bar)
   const [email, setEmail] = useState('')
   const [emailVerified, setEmailVerified] = useState(false)
 
-  // Email change/verification UI (top bar)
+  // Email change/verify UI (top bar)
   const [emailInput, setEmailInput] = useState('')
   const [emailSent, setEmailSent] = useState(false)
   const [emailCode, setEmailCode] = useState('')
   const [emailMsg, setEmailMsg] = useState('')
   const [emailErr, setEmailErr] = useState('')
 
-  // Registered data (page list)
+  // Registered products (page list)
   const [products, setProducts] = useState([])
 
-  // --- [Added] "My registered manuals" modal state/logic (same feature as Manuals.jsx) ---
+  // --- Registered product manuals modal state/logic ---
   const [manOpen, setManOpen] = useState(false)
   const [manEmail, setManEmail] = useState('')
-  const [manList, setManList] = useState([]) // list of products for the email
+  const [manList, setManList] = useState([]) // products for the email
   const [manSelected, setManSelected] = useState(null) // selected item
 
   const [manAuthMode, setManAuthMode] = useState(false)
@@ -116,7 +105,7 @@ export default function ProductLookup() {
     }
   }
 
-  // Top bar: enable rules — disable when same as current verified email
+  // Enable/disable rules for verify buttons (top bar)
   const isSameAsCurrent =
     emailInput.trim().toLowerCase() === (email || '').trim().toLowerCase()
   const canSend = !!emailInput.trim() && !(emailVerified && isSameAsCurrent)
@@ -132,7 +121,7 @@ export default function ProductLookup() {
     setEmailSent(true)
     setEmailVerified(false)
     setEmailErr('')
-    setEmailMsg('A verification code has been sent. (hint: ABCDE)')
+    setEmailMsg('Verification code sent. (Hint: ABCDE)')
   }
 
   const handleVerify = () => {
@@ -148,12 +137,12 @@ export default function ProductLookup() {
       loadProducts(val)
     } else {
       setEmailMsg('')
-      setEmailErr('Invalid verification code. (hint: ABCDE)')
+      setEmailErr('Invalid code. (Hint: ABCDE)')
       setEmailVerified(false)
     }
   }
 
-  // --- [Added] Store loader for "My registered manuals" modal ---
+  // --- Modal store loader ---
   const loadFromStore = () => {
     try {
       const store = JSON.parse(localStorage.getItem(STORE_KEY) || '{}')
@@ -185,7 +174,7 @@ export default function ProductLookup() {
     loadMyProductsByEmail(lastEmail || '')
   }
 
-  // Modal enable rules
+  // Modal enable/disable rules
   const manIsSameAsCurrent =
     manEmailInput.trim().toLowerCase() === (manEmail || '').trim().toLowerCase()
   const manCanSend = !!manEmailInput.trim() && !(manEmailVerified && manIsSameAsCurrent)
@@ -201,7 +190,7 @@ export default function ProductLookup() {
     setManEmailSent(true)
     setManEmailVerified(false)
     setManEmailErr('')
-    setManEmailMsg('A verification code has been sent. (hint: ABCDE)')
+    setManEmailMsg('Verification code sent. (Hint: ABCDE)')
   }
 
   const handleVerifyEmailCodeManual = () => {
@@ -218,20 +207,20 @@ export default function ProductLookup() {
     } else {
       setManEmailVerified(false)
       setManEmailMsg('')
-      setManEmailErr('Invalid verification code. (hint: ABCDE)')
+      setManEmailErr('Invalid code. (Hint: ABCDE)')
     }
   }
 
   return (
     <PageWrap title="Product Lookup" subtitle="View products registered with your verified email">
-      {/* Notice + email change/verification bar */}
+      {/* Notice + email change/verify bar */}
       <Card className="mb-4">
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <div className="text-base font-semibold">
                 Current email:{' '}
-                <span className="font-mono">{email || 'None'}</span>
+                <span className="font-mono">{email || 'none'}</span>
                 <span
                   className={[
                     'ml-2 align-middle px-2 py-0.5 text-[11px] rounded-full border',
@@ -240,23 +229,23 @@ export default function ProductLookup() {
                       : 'border-rose-300 bg-rose-50 text-rose-700',
                   ].join(' ')}
                 >
-                  {email ? 'Verified' : 'Not verified'}
+                  {email ? 'Verified' : 'Unverified'}
                 </span>
               </div>
               <p className="text-slate-600 dark:text-slate-300">
-                This page lists <b>all products</b> registered under your <b>verified email</b>.
+                This page lists all products <b>registered with your verified email</b>.
               </p>
             </div>
 
-            {/* [Added] My registered manuals button */}
+            {/* [Changed] View registered product manuals button */}
             <div className="mt-2 md:mt-0">
-              <Button onClick={openMyManuals} title="Review manuals for your registered products in one place">
-                View My Registered Manuals
+              <Button onClick={openMyManuals} title="See manuals for your registered products">
+                View Registered Product Manuals
               </Button>
             </div>
           </div>
 
-          {/* Email change/verification UI */}
+          {/* Email change/verify UI */}
           <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
             <Input
               type="email"
@@ -269,13 +258,13 @@ export default function ProductLookup() {
               disabled={!canSend}
               className={!canSend ? 'opacity-50 cursor-not-allowed' : ''}
             >
-              Send code
+              Request code
             </Button>
             <div className="flex items-center gap-2">
               <Input
                 value={emailCode}
                 onChange={(e) => setEmailCode(e.target.value)}
-                placeholder="Enter verification code (hint: ABCDE)"
+                placeholder="Enter code (Hint: ABCDE)"
                 disabled={!emailSent || (emailVerified && isSameAsCurrent)}
               />
               <Button
@@ -302,15 +291,15 @@ export default function ProductLookup() {
       {products.length === 0 ? (
         <Card>
           <p className="text-slate-600 dark:text-slate-300 text-sm">
-            {email ? 'No registered products.' : 'Please verify your email first.'}
+            {email ? 'No products registered.' : 'Please verify your email first.'}
           </p>
           <div className="mt-2 text-sm">
-            <a className="underline" href={`${base}/register`}>
-              → Go to Register page
+            <a className="underline" href="/register">
+              → Go to Register
             </a>{' '}
             <span className="text-slate-500 dark:text-slate-400">or</span>{' '}
-            <a className="underline" href={`${base}/manuals`}>
-              → Go to manuals search
+            <a className="underline" href="/manuals">
+              → Go to Manuals
             </a>
           </div>
         </Card>
@@ -321,7 +310,7 @@ export default function ProductLookup() {
             const c = d.customer || {}
             const priv = d.privacy || {}
 
-            const title = p.productName || p.model || 'Registered Product'
+            const title = p.productName || p.model || 'Registered product'
             const model = p.model || '-'
             const serial = p.serial || '-'
             const purchase = p.purchaseDate || '-'
@@ -343,7 +332,7 @@ export default function ProductLookup() {
                   {/* Product info */}
                   <section className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                     <h4 className="font-medium flex items-center gap-2">
-                      <span>📦</span> Product Information
+                      <span>📦</span> Product info
                     </h4>
                     <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-1 text-sm">
                       <dt className="text-slate-500 dark:text-slate-400">Category</dt>
@@ -371,7 +360,7 @@ export default function ProductLookup() {
                   {/* Customer info */}
                   <section className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                     <h4 className="font-medium flex items-center gap-2">
-                      <span>🙍</span> Customer Information
+                      <span>🙍</span> Customer info
                     </h4>
                     <dl className="mt-2 grid grid-cols-3 gap-x-3 gap-y-1 text-sm">
                       <dt className="text-slate-500 dark:text-slate-400">Name</dt>
@@ -393,7 +382,7 @@ export default function ProductLookup() {
                               : 'border-rose-300 bg-rose-50 text-rose-700',
                           ].join(' ')}
                         >
-                          {c.emailVerified ? 'Verified' : 'Not verified'}
+                          {c.emailVerified ? 'Verified' : 'Unverified'}
                         </span>
                       </dd>
 
@@ -408,11 +397,11 @@ export default function ProductLookup() {
                   {/* Privacy consents */}
                   <section className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                     <h4 className="font-medium flex items-center gap-2">
-                      <span>🔒</span> Privacy Consents
+                      <span>🔒</span> Privacy consents
                     </h4>
                     <ul className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
                       <li className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700">
-                        <span>Processing for warranty service</span>
+                        <span>Process for warranty service</span>
                         <span
                           className={[
                             'px-2 py-0.5 text-[11px] rounded-full border',
@@ -426,7 +415,7 @@ export default function ProductLookup() {
                       </li>
 
                       <li className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700">
-                        <span>Acknowledgement of cross-border transfer</span>
+                        <span>Cross-border transfer notice acknowledged</span>
                         <span
                           className={[
                             'px-2 py-0.5 text-[11px] rounded-full border',
@@ -440,7 +429,7 @@ export default function ProductLookup() {
                       </li>
 
                       <li className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700">
-                        <span>Receive product notices/marketing</span>
+                        <span>Product notices / marketing</span>
                         <span
                           className={[
                             'px-2 py-0.5 text-[11px] rounded-full border',
@@ -453,7 +442,7 @@ export default function ProductLookup() {
                         </span>
                       </li>
 
-                      {/* Channel consents */}
+                      {/* Channel-level consent */}
                       <li className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700">
                         <span>Receive promotional emails</span>
                         <span
@@ -467,14 +456,13 @@ export default function ProductLookup() {
                           {priv.promoEmail ? 'Consented' : 'Not consented'}
                         </span>
                       </li>
-
                     </ul>
                   </section>
 
                   {/* Attached invoices */}
                   <section className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                     <h4 className="font-medium flex items-center gap-2">
-                      <span>🧾</span> Attached Invoices
+                      <span>🧾</span> Attached invoices
                     </h4>
                     {Array.isArray(p.invoiceFiles) && p.invoiceFiles.length > 0 ? (
                       <ul className="mt-2 space-y-1 text-sm">
@@ -490,7 +478,7 @@ export default function ProductLookup() {
                               </div>
                             </div>
                             <span className="text-xs text-slate-400">
-                              Preview/Download will be available after upload integration.
+                              Preview/download will be available after upload integration.
                             </span>
                           </li>
                         ))}
@@ -508,13 +496,13 @@ export default function ProductLookup() {
         </div>
       )}
 
-      {/* [Added] "My registered manuals" modal (same feature as Manuals.jsx) */}
+      {/* Registered product manuals modal (single manual: EN) */}
       {manOpen && (
-        <Modal title="My Registered Manuals" onClose={() => setManOpen(false)}>
+        <Modal title="Registered Product Manuals" onClose={() => setManOpen(false)}>
           {/* Current email + change button */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-slate-600 dark:text-slate-300">
-              Current email: <b>{manEmail || 'None'}</b>{' '}
+              Current email: <b>{manEmail || 'none'}</b>{' '}
               <span
                 className={[
                   'ml-1 px-2 py-0.5 text-[11px] rounded-full border',
@@ -523,12 +511,12 @@ export default function ProductLookup() {
                     : 'border-rose-300 bg-rose-50 text-rose-700',
                 ].join(' ')}
               >
-                {manEmail ? 'Verified' : 'Not verified'}
+                {manEmail ? 'Verified' : 'Unverified'}
               </span>
             </p>
             <div className="flex items-center gap-2">
-              <a className="text-sm underline" href={`${base}/register`} title="Register a new product">
-                Go to Register page
+              <a className="text-sm underline" href="/register" title="Register a new product">
+                Go to registration
               </a>
               <Button
                 variant="secondary"
@@ -541,12 +529,12 @@ export default function ProductLookup() {
                   setManEmailInput(manEmail || '')
                 }}
               >
-                {manAuthMode ? 'Close' : 'Change/Verify Email'}
+                {manAuthMode ? 'Close' : 'Change/Verify email'}
               </Button>
             </div>
           </div>
 
-          {/* Email change/verification section */}
+          {/* Email change/verify section */}
           {manAuthMode && (
             <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -561,13 +549,13 @@ export default function ProductLookup() {
                   disabled={!manCanSend}
                   className={!manCanSend ? 'opacity-50 cursor-not-allowed' : ''}
                 >
-                  Send code
+                  Request code
                 </Button>
                 <div className="flex items-center gap-2">
                   <Input
                     value={manEmailCode}
                     onChange={(e) => setManEmailCode(e.target.value)}
-                    placeholder="Enter verification code (hint: ABCDE)"
+                    placeholder="Enter code (Hint: ABCDE)"
                     disabled={!manEmailSent || (manEmailVerified && manIsSameAsCurrent)}
                   />
                   <Button
@@ -589,10 +577,10 @@ export default function ProductLookup() {
             </div>
           )}
 
-          {/* Product list / brief detail + language actions */}
+          {/* Product list / detail + single manual actions */}
           {manList.length === 0 ? (
             <p className="text-slate-600 dark:text-slate-300">
-              No products registered for this email. Please complete product registration first.
+              No products are registered with this email. Please register a product first.
             </p>
           ) : (
             <>
@@ -616,7 +604,7 @@ export default function ProductLookup() {
                       S/N: {it.product?.serial || '-'}
                     </div>
                     <div className="text-xs text-slate-500 dark:text-slate-400">
-                      Purchase date: {it.product?.purchaseDate || '-'}
+                      Purchased: {it.product?.purchaseDate || '-'}
                     </div>
                   </button>
                 ))}
@@ -642,51 +630,37 @@ export default function ProductLookup() {
                     </dd>
                   </dl>
 
-                  <div className="mt-3 font-medium">
-                    Owner’s Manual ({LANGS.length} languages)
-                  </div>
-                  <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {LANGS.map((lang) => (
-                      <div
-                        key={lang.code}
-                        className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700"
-                      >
-                        <div className="text-sm">{lang.label}</div>
-                        <div className="flex items-center gap-2">
-                          <a
-                            className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-1.5 text-sm bg-transparent transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 dark:border-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:focus-visible:ring-slate-600"
-                            href={buildPlaceholderUrl(
-                              base,
-                              manSelected.product?.productName ||
-                                manSelected.product?.model ||
-                                '-',
-                              lang.code,
-                              'view'
-                            )}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Open in new tab
-                          </a>
-                          <a
-                            className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-1.5 text-sm bg-transparent transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 dark:border-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:focus-visible:ring-slate-600"
-                            href={buildPlaceholderUrl(
-                              base,
-                              manSelected.product?.productName ||
-                                manSelected.product?.model ||
-                                '-',
-                              lang.code,
-                              'download'
-                            )}
-                            target="_blank"
-                            rel="noreferrer"
-                            download
-                          >
-                            Download
-                          </a>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="mt-3 font-medium">Owner’s Manual (EN)</div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <a
+                      className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-1.5 text-sm bg-transparent transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 dark:border-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:focus-visible:ring-slate-600"
+                      href={buildPlaceholderUrl(
+                        manSelected.product?.productName ||
+                          manSelected.product?.model ||
+                          '-',
+                        'en',
+                        'view'
+                      )}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open in new tab
+                    </a>
+                    <a
+                      className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-1.5 text-sm bg-transparent transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 dark:border-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:focus-visible:ring-slate-600"
+                      href={buildPlaceholderUrl(
+                        manSelected.product?.productName ||
+                          manSelected.product?.model ||
+                          '-',
+                        'en',
+                        'download'
+                      )}
+                      target="_blank"
+                      rel="noreferrer"
+                      download
+                    >
+                      Download
+                    </a>
                   </div>
                 </div>
               )}

@@ -15,12 +15,6 @@ const CATEGORY_LABELS = {
   cool: 'Cooling',
 }
 
-/** 오너스 매뉴얼 지원 언어 (영어/한국어) */
-const LANGS = [
-  { code: 'en', label: 'English' },
-  { code: 'ko', label: '한국어' },
-]
-
 /** PDF 안내용 새 페이지로 이동할 URL 생성 (새 탭) */
 const buildPlaceholderUrl = (model, lang, action) =>
   `/manuals/pdf-missing?model=${encodeURIComponent(model)}&lang=${encodeURIComponent(
@@ -74,7 +68,7 @@ export default function ProductLookup() {
   // 등록 데이터 (페이지 리스트)
   const [products, setProducts] = useState([])
 
-  // --- [추가] 내 등록 매뉴얼 모달 상태/로직 (Manuals.jsx와 동일 기능) ---
+  // --- 등록 제품 매뉴얼 모달 상태/로직 ---
   const [manOpen, setManOpen] = useState(false)
   const [manEmail, setManEmail] = useState('')
   const [manList, setManList] = useState([]) // 해당 이메일의 등록 제품 목록
@@ -148,7 +142,7 @@ export default function ProductLookup() {
     }
   }
 
-  // --- [추가] 내 등록 매뉴얼 모달용 스토리지 로더 ---
+  // --- 모달용 스토리지 로더 ---
   const loadFromStore = () => {
     try {
       const store = JSON.parse(localStorage.getItem(STORE_KEY) || '{}')
@@ -243,10 +237,10 @@ export default function ProductLookup() {
               </p>
             </div>
 
-            {/* [추가] 내 등록 매뉴얼 보기 버튼 */}
+            {/* [변경] 등록 제품 매뉴얼 보기 버튼 */}
             <div className="mt-2 md:mt-0">
               <Button onClick={openMyManuals} title="등록된 제품의 매뉴얼을 한 곳에서 확인">
-                내 등록 매뉴얼 보기
+                등록 제품 매뉴얼 보기
               </Button>
             </div>
           </div>
@@ -305,7 +299,7 @@ export default function ProductLookup() {
             </a>{' '}
             <span className="text-slate-500 dark:text-slate-400">또는</span>{' '}
             <a className="underline" href="/manuals">
-              → 메뉴얼 검색으로 이동
+              → 매뉴얼 검색으로 이동
             </a>
           </div>
         </Card>
@@ -462,7 +456,6 @@ export default function ProductLookup() {
                           {priv.promoEmail ? '동의' : '미동의'}
                         </span>
                       </li>
-
                     </ul>
                   </section>
 
@@ -503,9 +496,9 @@ export default function ProductLookup() {
         </div>
       )}
 
-      {/* [추가] 내 등록 매뉴얼 보기 모달 (Manuals.jsx 기능 동일) */}
+      {/* [변경] 등록 제품 매뉴얼 보기 모달 (단일 매뉴얼 EN) */}
       {manOpen && (
-        <Modal title="내 등록 매뉴얼" onClose={() => setManOpen(false)}>
+        <Modal title="등록 제품 매뉴얼" onClose={() => setManOpen(false)}>
           {/* 현재 이메일 상태 + 변경 버튼 */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-slate-600 dark:text-slate-300">
@@ -584,7 +577,7 @@ export default function ProductLookup() {
             </div>
           )}
 
-          {/* 제품 목록 / 간단 상세 + 언어 액션 */}
+          {/* 제품 목록 / 간단 상세 + 단일 매뉴얼 액션 */}
           {manList.length === 0 ? (
             <p className="text-slate-600 dark:text-slate-300">
               이 이메일로 등록된 제품이 없습니다. 먼저 제품 등록을 완료하세요.
@@ -637,49 +630,37 @@ export default function ProductLookup() {
                     </dd>
                   </dl>
 
-                  <div className="mt-3 font-medium">
-                    Owner’s Manual ({LANGS.length}개 언어)
-                  </div>
-                  <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {LANGS.map((lang) => (
-                      <div
-                        key={lang.code}
-                        className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700"
-                      >
-                        <div className="text-sm">{lang.label}</div>
-                        <div className="flex items-center gap-2">
-                          <a
-                            className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-1.5 text-sm bg-transparent transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 dark:border-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:focus-visible:ring-slate-600"
-                            href={buildPlaceholderUrl(
-                              manSelected.product?.productName ||
-                                manSelected.product?.model ||
-                                '-',
-                              lang.code,
-                              'view'
-                            )}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            새 탭에서 보기
-                          </a>
-                          <a
-                            className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-1.5 text-sm bg-transparent transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 dark:border-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:focus-visible:ring-slate-600"
-                            href={buildPlaceholderUrl(
-                              manSelected.product?.productName ||
-                                manSelected.product?.model ||
-                                '-',
-                              lang.code,
-                              'download'
-                            )}
-                            target="_blank"
-                            rel="noreferrer"
-                            download
-                          >
-                            다운로드
-                          </a>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="mt-3 font-medium">Owner’s Manual (EN)</div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <a
+                      className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-1.5 text-sm bg-transparent transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 dark:border-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:focus-visible:ring-slate-600"
+                      href={buildPlaceholderUrl(
+                        manSelected.product?.productName ||
+                          manSelected.product?.model ||
+                          '-',
+                        'en',
+                        'view'
+                      )}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      새 탭에서 보기
+                    </a>
+                    <a
+                      className="inline-flex items-center rounded-lg border border-slate-300 px-3 py-1.5 text-sm bg-transparent transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 dark:border-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:focus-visible:ring-slate-600"
+                      href={buildPlaceholderUrl(
+                        manSelected.product?.productName ||
+                          manSelected.product?.model ||
+                          '-',
+                        'en',
+                        'download'
+                      )}
+                      target="_blank"
+                      rel="noreferrer"
+                      download
+                    >
+                      다운로드
+                    </a>
                   </div>
                 </div>
               )}
